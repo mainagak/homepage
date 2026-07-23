@@ -63,3 +63,18 @@ npm run build
 
 - 会社の正式メールアドレス（現状 `info@froedux.example.com` を仮設定、`index.html` のヘッダー「お問い合わせ」ボタン）
 - 電話番号下2桁（ヒアリングシート上 `080-4356-38XX` のまま。フッターの`tel:`リンクは末尾を`00`で仮設定）
+- 本番ドメイン（現状 `https://www.froedux.jp/` を仮設定。canonical/OGP/構造化データ/sitemap.xml/robots.txtの計5箇所を、確定後に一括置換してください）
+
+## SEO実装状況
+
+| 項目 | 状態 | 備考 |
+| :--- | :--- | :--- |
+| title / meta description | 実装済み | `index.html` |
+| canonical / OGP / Twitter Card | 実装済み | ドメイン確定後に要置換 |
+| 構造化データ（JSON-LD） | 実装済み | EducationalOrganization, WebSite |
+| 見出し階層（h1→h2→h3） | 修正済み | 1ページにh1は1つのみ |
+| sitemap.xml / robots.txt | 実装済み | `public/` 配下、buildでdist直下に出力 |
+| favicon / OGP画像 | 未実装 | 正式ロゴ確定後に対応 |
+| FAQPage構造化データ | 未実装 | FAQコンテンツ追加後に対応（ロードマップDay8参照） |
+
+詳細な公開スケジュールは別途「SEO展開ロードマップ（半月プラン）」を参照してください。

@@ -42,8 +42,9 @@ npm run build
 
 ## さくらのレンタルサーバー（CyberHome管理画面）への公開手順
 
-サイト管理URL: https://www.cyberhome.ne.jp/app/sslLogin.do
-（ID・パスワードは別途管理・提供予定）
+- 公開URL: https://jyoho1.web.cyberhome.ne.jp/
+- サイト管理URL: https://www.cyberhome.ne.jp/app/sslLogin.do
+  （ID・パスワードは別途管理・提供予定）
 
 1. `npm run build` を実行し `dist/` フォルダを生成する
 2. `dist/` フォルダの中身一式を、FTP/FTPSクライアント（FileZilla等）で
@@ -63,18 +64,47 @@ npm run build
 
 - 会社の正式メールアドレス（現状 `info@froedux.example.com` を仮設定、`index.html` のヘッダー「お問い合わせ」ボタン）
 - 電話番号下2桁（ヒアリングシート上 `080-4356-38XX` のまま。フッターの`tel:`リンクは末尾を`00`で仮設定）
-- 本番ドメイン（現状 `https://www.froedux.jp/` を仮設定。canonical/OGP/構造化データ/sitemap.xml/robots.txtの計5箇所を、確定後に一括置換してください）
+- Google Analytics 測定ID（現状 `index.html` に `G-XXXXXXXXXX` を仮設定。取得手順は下記「アクセス解析（Google Analytics）」参照）
+
+## アクセス解析（Google Analytics）
+
+サイト訪問者数を計測するため、`index.html` の `<head>` 先頭にGoogle Analytics 4（gtag.js）のトラッキングコードを実装済みです。
+ただし、GA4のプロパティ作成はご自身のGoogleアカウントでの操作が必要なため、以下の手順で測定IDを取得し、`index.html` 内の `G-XXXXXXXXXX`（2箇所）を置き換えてください。
+
+### 測定ID取得の手順
+
+1. [Google Analytics](https://analytics.google.com/) にご自身のGoogleアカウントでログイン
+2. 「管理」→「アカウントを作成」→ アカウント名（例：FroEduX）を入力
+3. 「プロパティを作成」→ プロパティ名（例：FroEduX公式サイト）、レポートのタイムゾーン「日本」、通貨「日本円」を設定
+4. 業種・ビジネスの規模等を選択（任意）
+5. 「データストリーム」→「ウェブ」を選択し、ウェブサイトURL `https://jyoho1.web.cyberhome.ne.jp/` とストリーム名を入力
+6. 発行された「測定ID」（`G-`で始まる文字列）をコピー
+7. `index.html` 内の `G-XXXXXXXXXX`（2箇所）を、その測定IDに置き換えて保存
+
+### 計測できること（初期設定のままで十分カバー）
+
+- サイト全体の訪問者数・ページビュー数（リアルタイム/日次/週次）
+- 流入経路（検索・SNS・直接アクセスなど）
+- 訪問者の地域・デバイス（PC/スマホ）の内訳
+
+「開業前で、まずサイトの存在が認知されているかを知りたい」という目的であれば、上記の初期設定のみで十分です。追加のイベント計測（ボタンクリック数など）が必要になった場合は別途ご相談ください。
+
+### 注意事項
+
+- 測定IDを反映し、サイトが実際に公開（cyberhomeへデプロイ）された後でないとデータは計測されません（ローカル開発環境`npm run dev`でのアクセスはカウントされません）
+- 高校生も閲覧対象のサイトのため、Cookie使用に関する簡単なプライバシーポリシー表記を、サイト公開までにフッター等へ用意することをおすすめします
 
 ## SEO実装状況
 
 | 項目 | 状態 | 備考 |
 | :--- | :--- | :--- |
 | title / meta description | 実装済み | `index.html` |
-| canonical / OGP / Twitter Card | 実装済み | ドメイン確定後に要置換 |
+| canonical / OGP / Twitter Card | 実装済み | `https://jyoho1.web.cyberhome.ne.jp/` を設定済み |
 | 構造化データ（JSON-LD） | 実装済み | EducationalOrganization, WebSite |
 | 見出し階層（h1→h2→h3） | 修正済み | 1ページにh1は1つのみ |
 | sitemap.xml / robots.txt | 実装済み | `public/` 配下、buildでdist直下に出力 |
 | favicon / OGP画像 | 未実装 | 正式ロゴ確定後に対応 |
 | FAQPage構造化データ | 未実装 | FAQコンテンツ追加後に対応（ロードマップDay8参照） |
+| Google Analytics 4 | コード実装済み・要ID設定 | 測定ID取得手順は「アクセス解析」参照 |
 
 詳細な公開スケジュールは別途「SEO展開ロードマップ（半月プラン）」を参照してください。

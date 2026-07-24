@@ -64,22 +64,11 @@ npm run build
 
 - 会社の正式メールアドレス（現状 `info@froedux.example.com` を仮設定、`index.html` のヘッダー「お問い合わせ」ボタン）
 - 電話番号下2桁（ヒアリングシート上 `080-4356-38XX` のまま。フッターの`tel:`リンクは末尾を`00`で仮設定）
-- Google Analytics 測定ID（現状 `index.html` に `G-XXXXXXXXXX` を仮設定。取得手順は下記「アクセス解析（Google Analytics）」参照）
 
 ## アクセス解析（Google Analytics）
 
 サイト訪問者数を計測するため、`index.html` の `<head>` 先頭にGoogle Analytics 4（gtag.js）のトラッキングコードを実装済みです。
-ただし、GA4のプロパティ作成はご自身のGoogleアカウントでの操作が必要なため、以下の手順で測定IDを取得し、`index.html` 内の `G-XXXXXXXXXX`（2箇所）を置き換えてください。
-
-### 測定ID取得の手順
-
-1. [Google Analytics](https://analytics.google.com/) にご自身のGoogleアカウントでログイン
-2. 「管理」→「アカウントを作成」→ アカウント名（例：FroEduX）を入力
-3. 「プロパティを作成」→ プロパティ名（例：FroEduX公式サイト）、レポートのタイムゾーン「日本」、通貨「日本円」を設定
-4. 業種・ビジネスの規模等を選択（任意）
-5. 「データストリーム」→「ウェブ」を選択し、ウェブサイトURL `https://jyoho1.web.cyberhome.ne.jp/` とストリーム名を入力
-6. 発行された「測定ID」（`G-`で始まる文字列）をコピー
-7. `index.html` 内の `G-XXXXXXXXXX`（2箇所）を、その測定IDに置き換えて保存
+測定ID `G-EG1WMDPTV0` を設定済みです。
 
 ### 計測できること（初期設定のままで十分カバー）
 
@@ -105,6 +94,6 @@ npm run build
 | sitemap.xml / robots.txt | 実装済み | `public/` 配下、buildでdist直下に出力 |
 | favicon / OGP画像 | 未実装 | 正式ロゴ確定後に対応 |
 | FAQPage構造化データ | 未実装 | FAQコンテンツ追加後に対応（ロードマップDay8参照） |
-| Google Analytics 4 | コード実装済み・要ID設定 | 測定ID取得手順は「アクセス解析」参照 |
+| Google Analytics 4 | 実装済み | 測定ID `G-EG1WMDPTV0` を設定済み |
 
 詳細な公開スケジュールは別途「SEO展開ロードマップ（半月プラン）」を参照してください。

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Homepage - Contact us and chat with our AI assistant">
+    <title>Homepage | Welcome</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="logo">
+                <h1>Homepage</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link">Home</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#services" class="nav-link">Services</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <h2>Welcome to Our Homepage</h2>
+                <p>Discover amazing services and connect with us easily</p>
+                <button class="cta-button" onclick="scrollToSection('#contact')">Get in Touch</button>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="about">
+            <h2>About Us</h2>
+            <p>We provide excellent services to help your business grow. Our team is dedicated to delivering quality and innovation.</p>
+        </section>
+
+        <!-- Services Section -->
+        <section id="services" class="services">
+            <h2>Our Services</h2>
+            <div class="service-grid">
+                <div class="service-card">
+                    <h3>Service 1</h3>
+                    <p>High-quality service with professional team</p>
+                </div>
+                <div class="service-card">
+                    <h3>Service 2</h3>
+                    <p>Fast and reliable support 24/7</p>
+                </div>
+                <div class="service-card">
+                    <h3>Service 3</h3>
+                    <p>Innovative solutions for modern problems</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="contact">
+            <h2>Contact Us</h2>
+            <p>Have questions? Fill out the form below and we'll get back to you.</p>
+            <div class="contact-container">
+                <form id="contact-form" class="contact-form">
+                    <input type="text" id="name" placeholder="Your Name" required>
+                    <input type="email" id="email" placeholder="Your Email" required>
+                    <textarea id="message" placeholder="Your Message" rows="5" required></textarea>
+                    <button type="submit" class="submit-button">Send Message</button>
+                </form>
+                <div id="form-status" class="form-status"></div>
+            </div>
+        </section>
+
+        <!-- Chatbot Section -->
+        <section id="chatbot" class="chatbot-section">
+            <h2>Chat with Us</h2>
+            <p>Our AI assistant is here to help. Click below to start chatting.</p>
+            <button class="chat-toggle" onclick="toggleChatbot()">Open Chat</button>
+            <div id="chatbot-container" class="chatbot-hidden">
+                <iframe id="chatbot-iframe" src="chat.html" title="Chatbot"></iframe>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 Homepage. All rights reserved.</p>
+        <p>Contact: <a href="mailto:mainagak@gmail.com">mainagak@gmail.com</a></p>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

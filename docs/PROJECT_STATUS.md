@@ -334,4 +334,39 @@ acd4883 chore: setup development environment with Node.js and Python
 **次のアクション:** フェーズ5(p5-internal-spec-reviewer、内部仕様最終レビュー・確定)に
 着手する。`docs/specs/internal-spec.md`と6本の詳細設計ドキュメントの整合性を確認し、
 承認または差し戻しを判断する。
-</content>
+
+## 2026-08-02: チェックポイント12 — フェーズ5(内部仕様最終レビュー・確定)実施、承認
+
+- `docs/PROJECT_STATUS.md`・`docs/specs/README.md`・`docs/specs/external-spec.md`
+  (承認済み)・`docs/specs/architecture.md`(ドラフト確定)を再確認した上で、
+  `docs/specs/internal-spec.md`と6本の詳細設計ドキュメント(`internal-spec-datamodel.md`,
+  `internal-spec-repo-cicd.md`, `internal-spec-integration.md`,
+  `internal-spec-cyberhome.md`, `internal-spec-vercel.md`, `internal-spec-testing.md`)を
+  全文精読レビューした。
+- チェック観点: (1) トレーサビリティ(外部仕様の各要件が内部仕様のどこに実装されるか、
+  逆に内部仕様の各項目が承認済み外部仕様/アーキテクチャに遡れるか)、(2) API契約の
+  明確性(リクエスト/レスポンス形状・エラーケース・認証要件が実装時に迷わないか)、
+  (3) データモデルの妥当性(FAQ/問い合わせ/ダウンロード権限まわりの欠落有無)、
+  (4) 単体テスト方針の具体性、(5) 既存資産(`api/send-email.js`等)との整合性。
+- **結論: ブロッキングな矛盾・欠落なし。`docs/specs/internal-spec.md`を「承認」に
+  更新した。** 非ブロッキングコメント4件を記録:
+  1. `internal-spec-repo-cicd.md` 7.3節の環境変数名が旧名`HMAC_SHARED_SECRET`のまま
+     未修正(正式名称`INTEGRATION_HMAC_SECRET`との不一致、internal-spec.md 2章で
+     既知の問題として記録されていたが実ファイルは未修正)。
+  2. `internal-spec-vercel.md` 5.1節のレート制限の実装根拠が「確定前提」と記載されて
+     いるが、`phase4-clarification.md`(全280問)・`architecture.md`のいずれにも
+     該当する確定回答が見当たらない(実装内容自体は妥当、出典表現の修正を推奨)。
+  3. `internal-spec-datamodel.md` 3.5節のCSRF記述(「FastAPIの標準的なCSRFトークン
+     機構を使用」)が技術的に不正確(FastAPIに標準CSRF機構はない)。
+     `internal-spec-vercel.md` 7.2節が正しい実装方針(ダブルサブミット方式の独自実装)を
+     示しているため、実装上のブロッカーではない。
+  4. (任意)reCAPTCHAトークン有効期限(300秒)切れのUXケースをフェーズ8受け入れ
+     テストで一度手動確認することを推奨。
+- `docs/specs/architecture.md`末尾の「追加質問」3〜6(Cyberhome契約プラン詳細・実機
+  確認事項)は指示通り非ブロッキングとして扱い、これ自体を理由に差し戻していない。
+- `docs/specs/internal-spec.md`冒頭に承認セクションを追記し、`docs/specs/README.md`の
+  ダッシュボード・進捗ボード・完了済みリスト・残タスクを同期した。本チェックポイントの
+  内容はドキュメント更新のみで、コードは一切書いていない。
+
+**次のアクション:** フェーズ6(p6-implementer、実装・単体テスト)に着手する。着手時は
+上記非ブロッキングコメント1〜3を実装の早い段階で解消することを推奨する。

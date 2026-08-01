@@ -269,4 +269,41 @@ acd4883 chore: setup development environment with Node.js and Python
 - 本チェックポイントの後、ユーザーの指示によりgitコミット・ローカル保存を実施する。
 
 **次のアクション:** フェーズ4(p4-internal-spec-researcher、内部仕様調査)に着手する。
+
+## 2026-08-02: チェックポイント9 — フェーズ4着手前の曖昧さ撲滅(280問)完了
+
+- ユーザー指示により、フェーズ4着手前に3択形式の質問で曖昧さを完全撲滅する追加ラウンドを
+  実施。`docs/specs/phase4-clarification.md`に記録。
+- ラウンド1・2(各50問、ビジネスロジック中心)+インフラ深掘りラウンド1〜5(各30問、
+  Web/DB/Python技術基盤+最終ラウンドはユーザー指示により保守性テーマに変更)、
+  合計280問すべてに回答を得た。
+- 主な追加決定: DB(Neon)はFAQ管理Web GUI用に限定して前倒し導入(MVPリリース直後の
+  最初の保守作業として着手)。GUI認証はbcrypt+セッション/JWT(1週間)+CSRF+ログイン
+  試行制限+IP制限。`.gitattributes`でLF強制、コミットメッセージ英語統一、GitHubは
+  Private維持。**保守サイクル(フェーズ10)は大きい機能追加でも常に軽量な
+  p10-maintainerプロセスで対応する方針に転換**(`docs/specs/README.md`ゲートルールに反映)。
+- ブロッキングな矛盾はすべて解消。フェーズ4への引き継ぎ準備が整った。
+
+## 2026-08-02: チェックポイント10 — フェーズ4(内部仕様調査)完了、6サブエージェント分割実行
+
+- ユーザー承認済みの分割案(Wave1: データモデル/リポジトリ・CI-CD/連携契約 → Wave2:
+  Cyberhome側Perl CGI/Vercel側FastAPI → Wave3: テスト・デプロイ検証)に沿って
+  p4-internal-spec-researcherを6回ディスパッチ(各自fresh contextで担当領域のみ設計)。
+- 成果物: `docs/specs/internal-spec.md`(統合窓口)+
+  `internal-spec-datamodel.md`・`internal-spec-repo-cicd.md`・
+  `internal-spec-integration.md`・`internal-spec-cyberhome.md`・
+  `internal-spec-vercel.md`・`internal-spec-testing.md`(各詳細設計)。
+- 各エージェントには「280問の確定回答から導出できることは質問せず自ら決定し、
+  genuinely未決定な事項のみ3択で提示する」よう指示。結果、Wave間の食い違い7件は
+  すべて後続エージェントが自己解決(例: download.cgiのBasic認証の掛かり方、
+  書籍別パスワードと単一CGIスクリプトの両立、HMAC環境変数名の統一、`/health`の
+  ルーティング方式)。最終的な追加質問はわずか4件(GUIパスワードリセットのメール経路、
+  `Contents/`配下ダウンロードファイルのGit管理方針、CGIファイル実行権限の扱い、
+  問い合わせフォーム自動疎通確認の範囲)。
+- 私(オーケストレーター)が全6ドキュメントを精読し`internal-spec.md`に統合編纂、
+  横断的な矛盾チェックを実施(2章に食い違いの解決記録、3章に追加質問4件を整理)。
+- 本チェックポイントの後、ユーザーの指示によりgitコミット・ローカル保存を実施する。
+
+**次のアクション:** `docs/specs/internal-spec.md`の追加質問4件への回答を得て、
+フェーズ5(p5-internal-spec-reviewer、内部仕様最終レビュー・確定)に着手する。
 </content>

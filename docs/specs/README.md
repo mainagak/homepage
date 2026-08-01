@@ -8,13 +8,18 @@
 Vercelプラン選択)もユーザー確認済み(2026-08-01)。`external-spec.md`のホスティング方針
 表も軽微修正済み。フェーズ4(内部仕様調査)への引き継ぎ準備が整った。**
 
+**2026-08-01追記:** ユーザーの指示により、フェーズ4着手前に曖昧さを完全撲滅する
+追加ラウンドを実施中。`docs/specs/phase4-clarification.md`に3択形式の質問50問
+(ラウンド1)を提示し、ユーザーの回答待ち。3ラウンド(50問×3)完了後にフェーズ4へ
+進む。`architecture.md`の「追加質問」3〜6もこのラウンドで一緒に確認する想定。
+
 **次回再開時に最初にやること:**
-1. `docs/specs/architecture.md`の「決定事項」節を前提として、フェーズ4
-   (p4-internal-spec-researcher、内部仕様調査)に着手する。
-2. `docs/specs/architecture.md`末尾の「追加質問」3〜6(Cyberhome契約プランの正確な
-   月額費用、文字コード/Apacheバージョンの実機確認、`AuthUserFile`絶対パス、reCAPTCHA
-   キー)は非ブロッキング。フェーズ4と並行して確認を進めてよい(ユーザーへの追加確認が
-   必要な事項として都度尋ねる)。
+1. `docs/specs/phase4-clarification.md`を確認し、ラウンド1の50問への回答が
+   得られているか確認する。
+2. 回答が得られていれば反映し、ラウンド2(50問)を作成・提示する。ラウンド3まで
+   完了したら、`docs/specs/architecture.md`の「決定事項」節+ラウンド1〜3の回答を
+   前提に、フェーズ4(p4-internal-spec-researcher、内部仕様調査)に着手する。
+3. 回答がまだであれば、回答を待つ。
 
 **完了済み:**
 1. `git push` は `gh auth setup-git` でGCMの詰まりを回避し、完了済み(`origin/main` = `0f6c50c`)。

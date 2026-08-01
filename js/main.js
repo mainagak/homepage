@@ -22,9 +22,10 @@ function initializeEventListeners() {
 async function handleFormSubmit(e) {
     e.preventDefault();
 
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
-    const message = document.getElementById('message').value;
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const submitButton = document.querySelector('.submit-button');
 
     if (!name || !email || !message) {
         displayMessage('form-status', 'Please fill in all fields.', 'error');
@@ -36,7 +37,9 @@ async function handleFormSubmit(e) {
         return;
     }
 
-    displayMessage('form-status', 'Sending your message...', '');
+    displayMessage('form-status', 'Sending your message...', 'loading');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Sending...';
 
     try {
         const response = await apiRequest('/api/send-email', {
@@ -52,12 +55,17 @@ async function handleFormSubmit(e) {
         if (response.success) {
             displayMessage('form-status', '✓ Message sent successfully! We will get back to you soon.', 'success');
             clearForm('contact-form');
+            submitButton.textContent = 'Send Message';
         } else {
             displayMessage('form-status', '✗ Failed to send message. Please try again.', 'error');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Send Message';
         }
     } catch (error) {
         console.error('Form submission error:', error);
         displayMessage('form-status', '✗ An error occurred. Please try again later.', 'error');
+        submitButton.disabled = false;
+        submitButton.textContent = 'Send Message';
     }
 }
 

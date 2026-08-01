@@ -438,3 +438,81 @@ acd4883 chore: setup development environment with Node.js and Python
 **次のアクション:** フェーズ6の残りタスク(データモデル/連携契約の実装、Cyberhome側
 CGI実装、Vercel側FastAPI実装、テスト・CI/CD詳細実装)に着手する。本タスクはあくまで
 「土台」であり、システムテスト・E2Eテスト(フェーズ7・8)はまだ実施していない。
+
+## 2026-08-02: チェックポイント14 — フェーズ6 Task#2(データモデル)完了
+
+- Wave1の並行実行可能タスクのうち`docs/specs/internal-spec-datamodel.md`担当分
+  (FAQ JSON schema・実データファイル・将来のNeon Postgres schemaの参照SQL)を実装した。
+- **`api/app/data/faq.json`(MVP実データファイル)を新規作成:** 内容は
+  `internal-spec-datamodel.md` 2.2節のスキーマ通り、`{"faq_schema_version": 1,
+  "items": []}`(external-spec.md確定事項通りFAQ 0件で開始)。
+  - **配置パスに関する判断(記録):** `internal-spec-datamodel.md` 2.1節は
+    「本書が規定するのはファイルの中身であり、パスはAPI設計側(Wave2)の決定を
+    優先してよい」と明記しており、厳密には`api/app/`配下はVercel側FastAPI実装
+    (別タスク)の担当領域。しかし`internal-spec-repo-cicd.md` 1.3節と
+    `internal-spec-vercel.md` 1章がいずれも独立に`api/app/data/faq.json`という
+    パスで一致しており(Wave1・Wave2両方の確定事項)、内容(データそのもの)の
+    唯一の出典は本タスクが担当する`internal-spec-datamodel.md`であるため、
+    **`api/app/`配下に追加したのはこのデータファイル1点のみ**とし、
+    `app/__init__.py`・`app/main.py`・ルーター・サービス等のFastAPIアプリ本体
+    (コード)は一切作成していない(Vercel側実装タスクの担当領域のまま)。
+- **`docs/specs/data/faq.schema.json`を新規作成:** `internal-spec-datamodel.md`
+  2.3節・2.4節のフィールド定義・バリデーションルールをJSON Schema(draft-07)として
+  形式化した参照ドキュメント。将来のPydanticモデル実装(Vercel側タスク)や手動編集時の
+  参照として使うことを想定(id一意性・カテゴリ内`display_order`一意性はJSON Schema
+  単体では表現できないため、その旨をファイル内に明記し、下記の`scripts/validate_faq.py`
+  側で担保)。
+- **`docs/specs/data/neon-schema.sql`を新規作成:** `internal-spec-datamodel.md` 3.2節の
+  `faqs`/`gui_accounts`/`faq_change_log`テーブル定義+インデックスをそのままDDL化した
+  参照専用SQL。ファイル冒頭に「実行を想定した稼働中のマイグレーションではない、
+  DB導入自体がMVPスコープ外、現時点でNeonへの接続・提供は一切行っていない」ことを
+  明記した。実データベースの作成・接続・migration-runnerの実装は一切行っていない
+  (指示通り)。
+- **`scripts/validate_faq.py`(新規、Python標準ライブラリのみ)を実装:**
+  `internal-spec-datamodel.md` 2.4節のバリデーションルール(id正規表現、category固定
+  3値、question/answer文字数・`<`/`>`禁止、display_order正の整数・カテゴリ内一意性、
+  id一意性)を実装したスタンドアロンの検証ロジック+CLI
+  (`python scripts/validate_faq.py <path>`)。FastAPI側Pydanticモデル
+  (`api/app/models/faq.py`、Vercel側タスクの担当領域、未作成)とは独立した実装であり、
+  Claude Codeが`faq.json`を手動編集する運用(2.5節)における検証ツールとして使う。
+- **単体テスト:** `scripts/tests/test_validate_faq.py`(pytest、50ケース)を新規作成。
+  正常系(0件/1件/複数カテゴリ/改行許容)、トップレベル構造異常、必須キー欠落、
+  `id`正規表現違反、`category`不正値、`question`/`answer`の文字数境界値・空文字・
+  `<`/`>`混入、`display_order`の型・範囲異常(0/負数/浮動小数点/bool/文字列/None)、
+  `id`重複、同一カテゴリ内`display_order`重複、異カテゴリ間での重複許容、ファイルI/O
+  異常系(存在しないファイル/不正JSON)、CLI(`main()`の戻り値0/1)、そして実際に配置した
+  `api/app/data/faq.json`自体が検証を通過し0件で開始していることを確認する回帰テスト、
+  を網羅する。
+- **テスト実行結果:** ローカル環境にPythonが未導入だったため`winget install
+  Python.Python.3.12`で導入し(pip経由でpytestも追加インストール)、
+  `python -m pytest scripts/tests -v` を実行 → **50件全て成功(0.19秒)**。
+  加えて `python scripts/validate_faq.py api/app/data/faq.json` のCLI実行でも
+  `OK` を確認、`docs/specs/data/faq.schema.json` 自体が正しいJSONとしてパース
+  できることも確認した。
+- **共通命名規則(`internal-spec-datamodel.md` 1章):** 別ファイルとしての新規実装は
+  行っていない(同章自体が承認済みドキュメントとして各設計ドキュメントの参照元になる
+  ため、実体は既存の同ドキュメントで足りると判断)。本タスクで作成したJSON/SQLの
+  キー名・テーブル名・カラム名は同章の規約(snake_case、`is_`接頭辞、
+  `created_at`/`updated_at`等)にすべて準拠している。
+- **JSON→DB移行方針(4章):** 移行スクリプト自体はDB未導入のMVPでは実行対象がなく
+  (Neon導入は保守フェーズの最優先タスク)、`docs/specs/data/neon-schema.sql`末尾に
+  移行時のINSERT文テンプレートをコメントとして記録するに留めた(指示通り、
+  実際に動く移行パイプラインは実装していない)。
+- **内部仕様上のブロッキングな未決定事項・ギャップ: なし。** 上記「配置パスに関する
+  判断」は仕様の欠落や矛盾ではなく、実装タスクの分担(データモデル担当 vs Vercel側
+  担当)に関する境界判断であり、内部仕様自体は当該ファイルの中身・パスとも一貫して
+  記述されている。次にVercel側FastAPI実装タスクへ着手する際は、
+  `api/app/data/faq.json`が既に存在すること・`api/app/`配下の他のファイル
+  (`__init__.py`・`main.py`・`routers/`・`services/`・`models/`等)は本タスクでは
+  未作成であることを踏まえて進めること。
+- 本チェックポイントの後、gitコミットを実施する(データ+テストコード+ドキュメント
+  更新を1コミットにまとめる、リポジトリの既存コミット慣行に合わせ英語のコミット
+  メッセージとする)。
+
+**次のアクション:** フェーズ6の残りタスク(連携契約の実装、Cyberhome側CGI実装、
+Vercel側FastAPI実装、テスト・CI/CD詳細実装)に着手する。Vercel側FastAPI実装タスクは
+`api/app/data/faq.json`(本タスクで作成済み)を`app/data/`配下にそのまま読み込む形で
+`app/`配下の残り一式(`__init__.py`・`main.py`・`core/`・`middleware/`・`routers/`・
+`models/`・`services/`・`db/`・`templates/`・`static/`)を新規実装すればよい。
+本タスクはデータモデル・単体テストのみであり、システムテスト・E2Eテスト
+(フェーズ7・8)はまだ実施していない。

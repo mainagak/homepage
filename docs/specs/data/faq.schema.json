@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://internal-spec.local/schemas/faq.schema.json",
+  "title": "FAQ JSON file schema (MVP static file)",
+  "description": "docs/specs/internal-spec-datamodel.md 2章(FAQ JSON schema)に対応する形式定義。api/app/data/faq.json の中身の形を規定する。将来Neonへ移行後もキー名の互換性維持の基準として参照する(4章参照)。id一意性・カテゴリ内display_order一意性はJSON Schemaでは表現しないため、scripts/validate_faq.py が追加チェックする。",
+  "type": "object",
+  "required": ["faq_schema_version", "items"],
+  "properties": {
+    "faq_schema_version": {
+      "const": 1,
+      "description": "現在は1固定(2.3節)。"
+    },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/faqItem" }
+    }
+  },
+  "definitions": {
+    "faqItem": {
+      "type": "object",
+      "required": ["id", "category", "question", "answer", "display_order"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^faq-\\d{4}$",
+          "description": "4桁ゼロ埋め連番(例: faq-0001)。一度割り当てたら変更・再利用しない(2.3節)。"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["書籍について", "仕事の相談", "会社について"]
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[^<>]*$",
+          "description": "プレーンテキスト、HTMLタグを含めない(<,>禁止)。"
+        },
+        "answer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^[^<>]*$",
+          "description": "プレーンテキスト。改行(\\n)は許容(値はそのまま保持し、表示側で<br>相当に変換)。"
+        },
+        "display_order": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "同一category内での表示順(昇順)。category内で一意(このJSON Schemaでは表現できないため、scripts/validate_faq.py で検証)。"
+        }
+      }
+    }
+  }
+}

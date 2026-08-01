@@ -6,6 +6,16 @@
 内部仕様最終レビュー)が完了。`docs/specs/internal-spec.md`は2026-08-02に**承認**され、
 フェーズ6(実装・単体テスト)へ着手可能な状態になった。**
 
+**2026-08-02フェーズ6 Task#2(データモデル)完了:**
+`internal-spec-datamodel.md`に基づき、MVP実データファイル`api/app/data/faq.json`
+(FAQ 0件で開始)、参照用JSON Schema(`docs/specs/data/faq.schema.json`)、将来のNeon
+Postgres schema参照SQL(`docs/specs/data/neon-schema.sql`、DBは未接続・未提供)、
+スタンドアロンのバリデーションスクリプト(`scripts/validate_faq.py`)+pytest単体テスト
+50ケース(`scripts/tests/test_validate_faq.py`、全件成功)を実装した。`api/app/`配下は
+このデータファイル1点のみ追加し、FastAPIアプリ本体(コード)はVercel側実装タスクの
+担当領域として未着手のまま残した。詳細は`docs/PROJECT_STATUS.md`チェックポイント14を
+参照。
+
 **2026-08-02フェーズ6 Task#1(リポジトリ構成・CI/CD基盤)完了:**
 `internal-spec-repo-cicd.md`に基づき、`/site`(Cyberhome用)・`/api`(Vercel用)への
 モノレポ分割、`.gitattributes`、GitHub Actionsワークフロー4本
@@ -119,11 +129,18 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
     `api/vercel.json`書き換え、Node.js関連資産削除を実施。詳細は
     `docs/PROJECT_STATUS.md`チェックポイント13参照。
 
+12. **フェーズ6 Task#2(データモデル)完了(2026-08-02):** `api/app/data/faq.json`
+    (FAQ 0件、`internal-spec-datamodel.md` 2.2節準拠)、参照用JSON Schema
+    (`docs/specs/data/faq.schema.json`)、将来のNeon Postgres schema参照SQL
+    (`docs/specs/data/neon-schema.sql`、DB未接続)、`scripts/validate_faq.py`+
+    pytest単体テスト50ケース(`scripts/tests/test_validate_faq.py`、全件成功)を実装。
+    詳細は`docs/PROJECT_STATUS.md`チェックポイント14参照。
+
 **残タスク:**
-12. フェーズ6の残りタスク(データモデル/連携契約実装、Cyberhome側CGI実装、Vercel側
+13. フェーズ6の残りタスク(連携契約実装、Cyberhome側CGI実装、Vercel側
     FastAPI実装、テスト・CI/CD詳細実装)に着手する。
-13. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
-14. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
+14. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
+15. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
     現行方針と不整合)の扱いを整理する(非ブロッキング、詳細は
     `docs/PROJECT_STATUS.md`チェックポイント13の「フェーズ4/5へのフィードバック」参照)。
 
@@ -143,7 +160,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
 | 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
-| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、2026-08-02) |
+| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、Task#2: データモデル 完了、2026-08-02) |
 | 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 未着手 |
 | 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 未着手 |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |

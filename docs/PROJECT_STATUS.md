@@ -370,3 +370,71 @@ acd4883 chore: setup development environment with Node.js and Python
 
 **次のアクション:** フェーズ6(p6-implementer、実装・単体テスト)に着手する。着手時は
 上記非ブロッキングコメント1〜3を実装の早い段階で解消することを推奨する。
+
+## 2026-08-02: チェックポイント13 — フェーズ6着手、Task#1(リポジトリ構成・CI/CD基盤)完了
+
+- フェーズ6の依存グラフのうち、他タスクの土台となるTask#1
+  (`docs/specs/internal-spec-repo-cicd.md`のリポジトリ構成・CI/CD骨格)を実装した。
+- **フェーズ5非ブロッキングコメント1〜3の解消(実装前の下準備、別コミット):**
+  `internal-spec-repo-cicd.md` 7.3節の環境変数名を`HMAC_SHARED_SECRET`から
+  `INTEGRATION_HMAC_SECRET`に統一、`internal-spec-vercel.md` 5.1節の出典表現を
+  「確定前提」から「Wave2の裁量による追加」に修正、`internal-spec-datamodel.md` 3.5節の
+  CSRF記述をFastAPI標準機構という誤った説明から`internal-spec-vercel.md` 7.2節準拠の
+  ダブルサブミット方式の記述に修正(コメント4件目のreCAPTCHA期限切れUX確認はフェーズ8
+  スコープのため対象外)。
+- **モノレポ構成への移行:** ルート直下の`index.html`・`css/`・`js/`・
+  `public/robots.txt`・`public/sitemap.xml`を`site/`配下へ`git mv`で移設
+  (`internal-spec-repo-cicd.md` 1.2節の構成に対応する部分のみ。内容自体は精査・
+  書き換えせず既存のまま移動)。
+- **Node.js関連資産の全面廃棄(`architecture.md`決定事項2、移行方針表通り):**
+  `api/send-email.js`・`package-lock.json`・`node_modules/`・`scripts/dev-server.js`・
+  ルート直下`vercel.json`(旧・静的サイト全体配信設定)・`.env.example`/`.env.local`
+  (旧SMTP用)を削除。`scripts/setup.ps1`は移行方針表に明記がなく削除対象と断定できな
+  かったため据え置いた(下記「フェーズ4/5へのフィードバック」参照)。
+- **`/api`(Vercel/FastAPI)側の新規作成:** `api/vercel.json`(Root Directory=`/api`
+  前提、`index.py`への集約ルーティング)、`api/.vercelignore`、
+  `api/requirements.txt`(fastapi/uvicorn/pydantic/python-multipart)、
+  `api/requirements-dev.txt`(pytest/httpx/ruff)、`api/.env.example`
+  (MVP必須4変数: `RECAPTCHA_SECRET_KEY`/`INTEGRATION_HMAC_SECRET`/`ALLOWED_ORIGIN`/
+  `VERCEL_ENV`、`internal-spec-vercel.md` 8章の記載通り)を新規作成。
+  `api/app/`(FastAPIアプリ本体・ルーター・サービス)・`api/index.py`・`api/tests/`は
+  意図的に**作成していない**(Vercel側FastAPI実装は別タスクの担当領域であり、本タスクの
+  スコープは「リポジトリ構成・CI/CD骨格」に限定するため。ディレクトリの雛形すら作ると
+  Wave2の設計裁量を先取りすることになるため見送った)。
+- **`.gitattributes`新規作成:** `internal-spec-repo-cicd.md` 2章の内容をそのまま採用
+  (LF強制、CGI/Perl/`.htaccess`個別指定、バイナリファイル明示)。
+- **`.gitignore`更新:** 同1.5節の追加項目(Cyberhome側非公開設定・生成ログ、
+  Vercel/Python関連)を追記。既存のNode関連記述は「残置しても害はない」という同文書の
+  記載に従い削除せず残した。
+- **GitHub Actionsワークフロー4本を新規作成(`.github/workflows/`):**
+  `deploy-cyberhome.yml`(backup→deploy→smoke-test→notify-on-failureの4ジョブ構成、
+  `internal-spec-testing.md` 1章の詳細設計をそのまま採用。バックアップ方式は同文書
+  1.2節の決定通りFTPSミラーダウンロード、`lftp mirror`)、`playwright-smoke.yml`
+  (smoke/health-ping/notify-on-failureの3ジョブ、同文書2章・4.3節の`api/**`push
+  トリガー追加とVercel healthy待ちポーリングを反映)、`api-tests.yml`
+  (`ruff check`→`pytest api/tests`)、`perl-tests.yml`(`internal-spec-cyberhome.md`
+  6.5節提案・`internal-spec-testing.md` 3.2節確定のTest::More実行、非破壊的追加)。
+  4ワークフローともYAML構文を`js-yaml`でパース検証済み(実際のGitHub Actions実行・
+  実デプロイは今回行っていない。FTPS認証情報等の実シークレットも登録していない)。
+- **`/site`側の追加インフラ・設定ファイル:** `site/.ftpdeployignore`
+  (`cgi-bin/lib/t/`を除外)、`site/conf/hmac_secret.example.txt`・
+  `site/dl/.htpasswd.example`・`site/qr/.htpasswd.example`(すべてダミー値のみ、
+  実ファイルはGit管理外でFTP配置)。`site/cgi-bin/`・`site/news/`・
+  `site/templates/`・`site/Contents/`等、CGIロジックや記事コンテンツを伴う残りの
+  ディレクトリは意図的に**作成していない**(Cyberhome側CGI実装は別タスクの担当領域)。
+- 単体テストコード: 本タスクはスキャフォールディング(リポジトリ構成・CI/CD設定)であり、
+  独立したビジネスロジックを持たないため、Perl(約67ケース)・pytest(29ケース)の
+  単体テストは対象外(後続のCyberhome側/Vercel側実装タスクの担当)。ワークフローYAMLの
+  構文検証(`js-yaml`によるパース確認)のみ実施し、パスした。
+- **フェーズ4/5へのフィードバック(ブロッカーではない、次回整理推奨):**
+  `scripts/setup.ps1`(Node.js/Python/Git確認+`npm install`実行スクリプト)が、
+  ルート`package.json`の削除(チェックポイント6)・`architecture.md`決定事項9
+  (ローカル開発環境を持たない方針)により実質的に陳腐化しているが、
+  `internal-spec-repo-cicd.md`の移行方針表に明記がなく本タスクのスコープ外と判断し
+  削除しなかった。次の内部仕様改訂または保守タスクで扱いを明確にすることを推奨する。
+- 本チェックポイントはドキュメント修正・実装・状態記録の3コミットに分けて記録する
+  (`docs/specs`更新は実装と別コミットにする、ラウンド4 T13=A確定方針に従う)。
+
+**次のアクション:** フェーズ6の残りタスク(データモデル/連携契約の実装、Cyberhome側
+CGI実装、Vercel側FastAPI実装、テスト・CI/CD詳細実装)に着手する。本タスクはあくまで
+「土台」であり、システムテスト・E2Eテスト(フェーズ7・8)はまだ実施していない。

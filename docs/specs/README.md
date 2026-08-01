@@ -6,6 +6,16 @@
 内部仕様最終レビュー)が完了。`docs/specs/internal-spec.md`は2026-08-02に**承認**され、
 フェーズ6(実装・単体テスト)へ着手可能な状態になった。**
 
+**2026-08-02フェーズ6 Task#1(リポジトリ構成・CI/CD基盤)完了:**
+`internal-spec-repo-cicd.md`に基づき、`/site`(Cyberhome用)・`/api`(Vercel用)への
+モノレポ分割、`.gitattributes`、GitHub Actionsワークフロー4本
+(`deploy-cyberhome.yml`/`playwright-smoke.yml`/`api-tests.yml`/`perl-tests.yml`)、
+`api/vercel.json`書き換え、Node.js関連資産(`api/send-email.js`・
+`package-lock.json`・`node_modules/`・`scripts/dev-server.js`・旧`vercel.json`)の
+削除を実施した。フェーズ5非ブロッキングコメント1〜3(環境変数名・CSRF記述・
+レート制限出典表現)も解消済み。詳細は`docs/PROJECT_STATUS.md`チェックポイント13を
+参照。Cyberhome側CGI実装・Vercel側FastAPI実装・テスト/CI-CD詳細実装は後続タスク。
+
 **2026-08-02フェーズ5(内部仕様最終レビュー・確定)完了・承認:** `docs/specs/internal-spec.md`
 (統合窓口)+6本の詳細設計ドキュメント(`internal-spec-datamodel.md`,
 `internal-spec-repo-cicd.md`, `internal-spec-integration.md`, `internal-spec-cyberhome.md`,
@@ -104,9 +114,18 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
     矛盾・欠落なしと判断して承認。非ブロッキングコメント4件を`internal-spec.md`冒頭に
     記録(詳細は同ファイル参照)。**フェーズ6(実装・単体テスト)に着手可能。**
 
+11. **フェーズ6 Task#1(リポジトリ構成・CI/CD基盤)完了(2026-08-02):**
+    `/site`・`/api`モノレポ分割、`.gitattributes`、GitHub Actionsワークフロー4本、
+    `api/vercel.json`書き換え、Node.js関連資産削除を実施。詳細は
+    `docs/PROJECT_STATUS.md`チェックポイント13参照。
+
 **残タスク:**
-11. フェーズ6(p6-implementer、実装・単体テスト)に着手する。
-12. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
+12. フェーズ6の残りタスク(データモデル/連携契約実装、Cyberhome側CGI実装、Vercel側
+    FastAPI実装、テスト・CI/CD詳細実装)に着手する。
+13. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
+14. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
+    現行方針と不整合)の扱いを整理する(非ブロッキング、詳細は
+    `docs/PROJECT_STATUS.md`チェックポイント13の「フェーズ4/5へのフィードバック」参照)。
 
 ---
 
@@ -124,7 +143,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
 | 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
-| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 未着手(着手可能) |
+| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、2026-08-02) |
 | 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 未着手 |
 | 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 未着手 |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |

@@ -146,3 +146,15 @@ acd4883 chore: setup development environment with Node.js and Python
 
 **次のアクション:** ユーザーによる`external-spec.md`の加筆修正を待つ。修正内容を確認した
 上で、フェーズ3(p3-architecture-researcher)へ進む。
+
+---
+
+## 2026-08-01: 作業一時停止(本日夜に再開予定)
+
+- チェックポイント1〜4の内容をコミット済み(`076cdde`)。作業ツリーはクリーン
+  (`.claude/settings.local.json`のローカル設定差分のみ残存、無害)。
+- 停止時点のステータス: フェーズ1完了・フェーズ2承認済み。DB技術選定のみ
+  フェーズ3/4へ委譲。ホスティング方針(cyberhome/Apache + Vercel)確定済み。
+- ユーザーは本日夜に作業再開予定。再開までの間に`external-spec.md`へ本人が加筆修正を
+  行う可能性がある。**再開時は必ずファイルを読み直し、このチェックポイント
+  (commit `076cdde`)から変更があるか確認すること。**

@@ -3,17 +3,18 @@
 ## 🔴 再開時に最初に読むこと(/clear後はここから)
 
 **現在地:** フェーズ1(外部仕様調査)完了、フェーズ2(外部仕様レビュー)承認済み
-(2026-08-01)。`docs/specs/external-spec.md` は承認ステータス「承認」、以降変更なし。
-**フェーズ3(利用アーキテクチャー調査)着手し、ユーザーへの質問リスト(32項目)を
-`docs/specs/architecture.md` に提示済み。ユーザーからの回答待ちの状態で一時停止中。**
-次回再開時は、ユーザーから32項目への回答が得られているか確認し、得られていれば
-`docs/specs/architecture.md` の「技術要件」「候補と比較」「決定事項」を確定させ、
-フェーズ4(内部仕様調査)へ引き継ぐこと。回答がまだであれば、回答を待つこと。
+(2026-08-01)。フェーズ3(利用アーキテクチャー調査)も32項目の質問への回答を反映し、
+**技術要件・候補比較・決定事項を確定、最重要論点(問い合わせ機能のホスティング分担・
+Vercelプラン選択)もユーザー確認済み(2026-08-01)。`external-spec.md`のホスティング方針
+表も軽微修正済み。フェーズ4(内部仕様調査)への引き継ぎ準備が整った。**
 
-**2026-08-01追記(チェックポイント6):** 未コミット削除だった`README.md`/`package.json`
-(旧GitHub Pages本番方針前提の古い内容)は削除を確定してコミット済み(`007e9a3`)、
-`.gitignore`は復元済み。作業ツリーはクリーン。ユーザーは`/clear`直後に32項目への回答を
-投入する予定。詳細は`docs/PROJECT_STATUS.md`のチェックポイント6を参照。
+**次回再開時に最初にやること:**
+1. `docs/specs/architecture.md`の「決定事項」節を前提として、フェーズ4
+   (p4-internal-spec-researcher、内部仕様調査)に着手する。
+2. `docs/specs/architecture.md`末尾の「追加質問」3〜6(Cyberhome契約プランの正確な
+   月額費用、文字コード/Apacheバージョンの実機確認、`AuthUserFile`絶対パス、reCAPTCHA
+   キー)は非ブロッキング。フェーズ4と並行して確認を進めてよい(ユーザーへの追加確認が
+   必要な事項として都度尋ねる)。
 
 **完了済み:**
 1. `git push` は `gh auth setup-git` でGCMの詰まりを回避し、完了済み(`origin/main` = `0f6c50c`)。
@@ -28,23 +29,36 @@
    ソース管理はいずれもGit/GitHub。GitHub Pagesは本番ホスティングとして使わない方針に変更。
 4. フェーズ2レビューを実施し「承認」。軽微なコメント3件(チャットUIの表現、FAQ空状態の
    扱い、設立年2030年の表記確認)を`external-spec.md`冒頭に記録。ブロッキングではない。
-   ユーザーが承認後に加筆修正する可能性ありとされていたが、フェーズ3着手時点で
-   `external-spec.md`を再確認した結果、承認時点(commit `076cdde`)から変更なしと確認済み。
-5. フェーズ3着手。`docs/specs/README.md`・`docs/specs/external-spec.md`・
-   `docs/PROJECT_STATUS.md`および現行リポジトリ構成(`package.json`/`vercel.json`/
-   `api/send-email.js`等)を確認した上で、Cyberhome/Apache側技術スタック、Vercel側
-   技術スタック、DB選定、認証・秘密情報管理、両ホスティング先の連携方式、リポジトリ構成、
-   CI/CD、開発・テスト環境、監視・コスト運用の各領域について32項目の質問リストを作成し、
-   `docs/specs/architecture.md`(ステータス「調査中」)に記載した。
+5. フェーズ3着手。Cyberhome/Apache側技術スタック、Vercel側技術スタック、DB選定、
+   認証・秘密情報管理、両ホスティング先の連携方式、リポジトリ構成、CI/CD、
+   開発・テスト環境、監視・コスト運用の8領域・32項目の質問リストを作成し、
+   `docs/specs/architecture.md`に記載した。
+6. **ユーザーが32項目全てに回答(2026-08-01)。** 回答を反映し、`docs/specs/architecture.md`
+   の「技術要件」「候補と比較(静的/動的/DB)」「決定事項」を確定させた。主な確定事項:
+   - Cyberhome側: Perl 5.16・CPAN不可・管理者権限なしという制約の下、記事CGI
+     (`news.cgi`、テキストファイル取り込み)、ダウンロード用CGI(`download.cgi`、
+     Basic認証+自前アクセスログ)、QRコード遷移ページ(Basic認証)の詳細設計を提示。
+   - Vercel側: Node.js実装(`api/send-email.js`)は全面廃棄、Python(FastAPI)へ移行。
+     将来のAzure PaaS移行(Azure Functions/App Service)を見据えた設計とした。
+   - reCAPTCHA: v2採用、検証はVercel(FastAPI)が代行しCyberhome側へHMAC署名付き
+     トークンを引き渡す方式(CyberhomeにTLSモジュールがない制約への対応)を設計。
+   - DB: MVPでは導入しない(問い合わせ履歴はメール+テキストログ、FAQは静的JSON)。
+     将来必要になった場合の候補としてNeon(Postgres)・Airtableを整理。
+   - リポジトリ構成: モノレポ内`/site`(Cyberhome用)・`/api`(Vercel用)分割を採用。
+   - **重要な矛盾を検出・解消:** 回答(Q11/Q14/Q31)が「問い合わせフォーム処理をCyberhome
+     Perl CGIで行う」という、承認済み`external-spec.md`の「Vercelで処理・DB保存」と
+     矛盾する方向性を3回にわたり示した。エージェントは無断で上書きせず推奨案
+     (Cyberhome CGIでフォーム処理、Vercelは FAQ/チャットAPIとreCAPTCHA検証のみに
+     縮小)を提示し、**ユーザーが推奨案で確定することを承認(2026-08-01)。**
+     `external-spec.md`のホスティング方針表・DB保存の記載も軽微修正済み。
+   - 副次的に検出したVercel Hobby(無料)プランの商用利用規約上のリスクについても、
+     **リスクを許容してHobbyのまま進めることをユーザーが確定(2026-08-01)。**
 
 **残タスク:**
-6. ユーザーからの32項目の回答を待つ。
-7. 回答を反映し、`docs/specs/architecture.md`の技術要件導出・候補比較(静的コンテンツ/
-   動的コンテンツ/データベース)・決定事項を確定させる。
-8. 確定後、フェーズ4(p4-internal-spec-researcher)へ引き継ぐ。
+7. フェーズ4(p4-internal-spec-researcher、内部仕様調査)に着手する。
+8. 追加質問3〜6(非ブロッキング)はフェーズ4と並行して確認する。
 
 ---
-
 
 このディレクトリは、Vモデル型の開発プロセスにおける各フェーズの成果物を格納する。
 各フェーズは専用サブエージェント(`.claude/agents/p*.md`)が担当し、**フェーズ間は`/clear`で
@@ -57,8 +71,8 @@
 |---|---------|-----------------|--------|-----------|
 | 1 | 外部仕様調査 | p1-external-spec-researcher | [external-spec.md](external-spec.md) | 完了(DB選定のみフェーズ3/4へ委譲) |
 | 2 | 外部仕様最終レビュー・確定 | p2-external-spec-reviewer | external-spec.md (承認セクション追記) | 承認(2026-08-01、コメント3件は非ブロッキング) |
-| 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | 調査中(質問リスト32項目提示・ユーザー回答待ち、2026-08-01) |
-| 4 | 内部仕様調査 | p4-internal-spec-researcher | [internal-spec.md](internal-spec.md) | 未着手 |
+| 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
+| 4 | 内部仕様調査 | p4-internal-spec-researcher | [internal-spec.md](internal-spec.md) | 未着手(着手可能) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | 未着手 |
 | 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 未着手 |
 | 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 未着手 |
@@ -81,15 +95,17 @@
 
 - 外部仕様の対象機能: ①ホームページ仕様 ②問い合わせチャット機能(FAQ応答+問い合わせフォーム)
   ③コンテンツダウンロード(商品購入者への特典ファイル配布)
-- 内部仕様は一部確定(ホスティング先)、残りは未確定(要フェーズ3, 4での検討事項):
-  - 静的コンテンツ・ダウンロード機能: **Cyberhome/Apacheに確定**(2026-08-01)。
-  - 問い合わせ機能: **Vercelに確定**(2026-08-01)。
+- 内部仕様はフェーズ3で全項目確定(2026-08-01):
+  - 静的コンテンツ・ダウンロード機能: **Cyberhome/Apacheに確定**。
+  - 問い合わせ機能: **Cyberhome側Perl CGI(`contact.cgi`+sendmail)でフォーム処理・
+    メール送信・テキストログ記録を行い、VercelはFAQ/チャットAPIとreCAPTCHA検証のみに
+    縮小することが確定**(`external-spec.md`のホスティング方針表も軽微修正済み)。
   - ソース管理: いずれもGit/GitHub(GitHub Pagesはホスティング先としては不採用)。
-  - 動的コンテンツの実装言語・フレームワーク: 未定(候補: Python、CGI Perl[QRコード
-    遷移ページ用に指定済み]、Next.jsなど)。フェーズ3で検討中(質問リスト提示済み)。
-  - データベース: 未定。「バイブコーディングしやすい」「無料枠で開始し将来Azure移行」
-    という制約あり(要件詳細は`external-spec.md`の未解決事項参照)。保守性の高さを優先。
-    フェーズ3で候補比較を検討中(質問リスト提示済み)。
+  - 動的コンテンツの実装言語・フレームワーク: Vercel側はPython(FastAPI)に決定。
+    Cyberhome側はPerl CGI(`contact.cgi`/`download.cgi`/`news.cgi`)。
+  - データベース: **MVPでは導入しない**ことに決定(2026-08-01、フェーズ3)。将来
+    必要になった場合の候補はNeon(Postgres)・Airtable(`architecture.md`「候補と比較」
+    参照)。
 - 方針: 最低限度のMVPを作成し、以降は保守サイクルで機能追加していく想定。
 
 ## 未解決事項(解消済み・履歴)
@@ -98,13 +114,14 @@
 決定を行い、その前提でリポジトリ構成を整理・コミット済み(コミット `8e00019`)。
 その後フェーズ1で改めてユーザーに確認したところ、**cyberhome/Apacheをホームページ本体・
 ダウンロード機能のホスティング先、Vercelを問い合わせ機能のホスティング先とする**ことが
-2026-08-01に確定した。GitHub Pagesは本番ホスティングとしては採用しない。フェーズ3は
-この確定方針に基づき技術選定を行うこと(過去のコミット`8e00019`の前提は上書きされている
-ため、リポジトリ構成の再整理が必要になる可能性がある)。
+2026-08-01に確定した。GitHub Pagesは本番ホスティングとしては採用しない。
 
-## フェーズ3進行中の未解決事項
+## 現在の未解決事項(フェーズ4と並行して確認可能、非ブロッキング)
 
-- `docs/specs/architecture.md`に記載した32項目の質問リスト(Cyberhome/Apache側技術
-  スタック、Vercel側技術スタック、DB選定、認証・秘密情報管理、Cyberhome⇔Vercel連携、
-  リポジトリ構成・デプロイフロー、開発・テスト環境・監視、コスト・運用の8領域)への
-  ユーザー回答待ち。回答が得られ次第、技術要件の導出・候補比較・決定事項の確定に進む。
+- Cyberhome契約プランの正確な月額費用
+- 文字コード/Apacheバージョンの実機確認
+- `AuthUserFile`絶対パス
+- reCAPTCHAキー(v2サイトキー・シークレットキー)の登録状況
+
+詳細は`docs/specs/architecture.md`末尾の「追加質問」3〜6を参照。
+</content>

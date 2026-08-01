@@ -279,7 +279,8 @@ notify-on-failure:
 | 1 | トップページ表示 | `page.goto(SITE_BASE_URL)` | HTTP 200、Hero/About/Services/Contact/Chatbotウィジェット/Footerの各セクション見出しが表示されること |
 | 2 | 記事一覧表示 | `news.cgi`(または`news.html`経由)へ遷移 | HTTP 200、サーバーエラー文言が出力されないこと。記事0件でも一覧ページ自体は正常表示されること(初期状態を許容) |
 | 3 | 問い合わせフォームページ表示 | `page.goto(SITE_BASE_URL + "contact.html")` | HTTP 200、reCAPTCHA v2ウィジェット(`.g-recaptcha`相当の要素/iframe)が描画されること、プライバシー同意チェックボックスが**未チェック**であること(ラウンド2 R30=A) |
-| 4 | 問い合わせフォーム送信疎通確認 | `request.post()`でAPIレベルから`contact.cgi`へ、意図的にメールアドレス(確認用)を不一致にしたパラメータ一式を直接POST(reCAPTCHA・`verify_token`は付与しない) | HTTP 200が返り、`contact.html`の骨格に「メールアドレスが一致しません」等のエラーが再描画されること。**実際のメール送信・`contact_log.txt`への正常受付記録は発生しない**(2.5節「疎通確認の設計方針」参照) |
+| 4 | 問い合わせフォーム**正常系**送信確認(2026-08-02、B′案で確定) | ブラウザから`POST /api/verify-recaptcha`を`X-Smoke-Test-Auth: <SMOKE_TEST_SECRET>`ヘッダー付きで呼び出し(ダミーの`recaptcha_response`でよい、9章参照)、取得した`verify_token`を使い実際に`contact.html`のフォームを介して`contact.cgi`へPOSTする(テスト専用の氏名・メールアドレスを使用) | `POST /api/verify-recaptcha`が200+`verified:true`を返すこと。`contact.cgi`が302で`contact-thanks.html`へリダイレクトすること。**実際に運営者宛通知メール・自動返信メールが送信され、`contact_log.txt`に受付記録が追記される(意図的な許容、2.5節参照)** |
+| 4b | 問い合わせフォームのバリデーションエラー経路確認 | `request.post()`でAPIレベルから`contact.cgi`へ、意図的にメールアドレス(確認用)を不一致にしたパラメータ一式を直接POST(reCAPTCHA・`verify_token`は付与しない) | HTTP 200が返り、`contact.html`の骨格に「メールアドレスが一致しません」等のエラーが再描画されること。実際のメール送信・`contact_log.txt`への正常受付記録は発生しない |
 | 5 | FAQ/チャットウィジェット表示 | ウィジェットを開く操作 | `GET /api/faq`が200で応答すること。FAQ 0件時は「まだFAQがありません。お問い合わせフォームをご利用ください」+導線ボタンが表示されること(ラウンド1 A1=A)。1件以上ある場合はカテゴリごとに項目が表示されること |
 | 6 | プライバシーポリシーページ表示 | `page.goto(SITE_BASE_URL + "privacy.html")` | HTTP 200 |
 | 7 | QRコード遷移ページのBasic認証プロンプト確認(book1) | `request.get(SITE_BASE_URL + "qr/book1.html")`(認証情報なし、APIレベルで検証しブラウザの認証ダイアログを介さない) | HTTP **401**、`WWW-Authenticate: Basic`ヘッダーが含まれること |
@@ -346,18 +347,24 @@ Web GUI着手時(保守サイクル最初のタスク)に行う。
 | 手動 | 運営者・Claude Codeが選択したスイート | `playwright-smoke.yml`(`workflow_dispatch`) |
 | GUI関連(フェーズ10以降) | 2.3 GUIスイート | `playwright-gui-smoke.yml`(未実装) |
 
-### 2.5 疎通確認の設計方針(2.1節#4の根拠、および失敗時Issue化)
+### 2.5 疎通確認の設計方針(2.1節#4・#4bの根拠、および失敗時Issue化)
 
-`architecture.md`が定めた「破壊的な検証は行わない」という原則を、問い合わせフォームの
-自動テストに適用すると、実際にreCAPTCHAを解いて正常系の送信(実メール送信・
-`contact_log.txt`への受付記録)を**毎日自動で行うこと自体が意図しない副作用**
-(運営者宛メールボックスが日次テストメールで埋まる、テキストログが日次テスト行で
-汚染される)になり得ると判断した。そのため本書では、`contact.cgi`の処理フロー
-(`internal-spec-cyberhome.md` 2.2節: Referer確認→バリデーション→トークン検証→
-重複判定→ログ記録→送信)のうち**バリデーション段階で意図的に失敗させる**
-(確認用メールアドレスを不一致にする)ことで、reCAPTCHAトークンなしでも
-`contact.cgi`自体の疎通・エラーハンドリングを検証できる設計とした。この方針の
-妥当性についてはA/B/Cの選択肢があり得るため、末尾の「追加質問」で確認する。
+**2026-08-02確定(B′案):** ユーザーの判断により、正常系送信(実メール送信・
+`contact_log.txt`への受付記録)まで毎日自動で検証する方針を採用した。運営者宛
+メールボックスに日次テストメールが届くこと、`contact_log.txt`に日次テスト行が
+追記され続けることは**意図的に許容する**。テスト専用の送信者情報(氏名・
+メールアドレス)を使うことで、テストによる受信メール・ログ行を実際の顧客からの
+問い合わせと目視で区別できるようにする(例: 氏名「スモークテスト」、メールアドレス
+`smoke-test@jyoho1.web.cyberhome.ne.jp`のような実在しないダミードメイン)。
+
+reCAPTCHA自体は自動操作できないため、`internal-spec-vercel.md` 9章で確定した
+「Vercel側`/api/verify-recaptcha`のみに追加するCI専用分岐(`X-Smoke-Test-Auth`
+ヘッダー+Google公式テストシークレットキー)」を利用する。**`contact.cgi`は一切
+変更しない**(通常の送信と全く同じHMACトークン検証ロジックを通る)。
+
+これとは別に、reCAPTCHA/HMACトークンを一切介さない**バリデーションエラー経路**
+(2.1節#4b)も維持し、`contact.cgi`の入力検証・エラー再描画ロジック単体の疎通確認を
+行う(正常系テストが将来何らかの理由で無効化された場合の保険としても機能する)。
 
 `playwright-smoke.yml`自身の失敗時Issue自動作成は、1.5節と同型のロジックを
 `playwright-smoke.yml`の末尾ジョブとして実装する(タイトルのみ
@@ -644,6 +651,7 @@ Python単体テスト→デプロイ→E2Eスモークテスト」という順�
 |---|---|---|---|
 | `VERCEL_API_BASE_URL` | GitHub Actions Variable | `/health`・`/api/faq`への疎通確認先(例: `https://<project>.vercel.app`) | リポジトリ Variables |
 | `SITE_BASE_URL` | GitHub Actions Variable(`internal-spec-repo-cicd.md` 7.2節で既出、再掲のみ) | 公開サイトスモークテスト対象URL | リポジトリ Variables |
+| `SMOKE_TEST_SECRET`(2026-08-02追加) | GitHub Actions Secret | `playwright-smoke.yml`が2.1節#4で`X-Smoke-Test-Auth`ヘッダーに設定する値。Vercel側`SMOKE_TEST_SECRET`環境変数と同一値(`internal-spec-vercel.md` 9.2節) | リポジトリ Secrets |
 
 `GITHUB_TOKEN`(Actions既定、追加設定不要)に`issues: write`権限を`notify-on-failure`
 ジョブへ付与する(1.5節のYAML例に明記済み)。新規のGitHub Secretsは不要
@@ -673,34 +681,15 @@ Python単体テスト→デプロイ→E2Eスモークテスト」という順�
 
 ## 追加質問
 
-以下1件は、既存の280問の回答からもWave1/Wave2文書からも一意に導出できない、
-genuinely未決定な事項。問い合わせフォームの自動テスト範囲というテスト戦略上の
-トレードオフに関わり、Phase 6での実装に影響するため確認したい(非ブロッキング —
-初回はA案をデフォルト設計として本書に反映済みで、フェーズ5レビューを妨げない)。
+なし。**旧Q1(問い合わせフォーム自動疎通確認の範囲)は2026-08-02にユーザーが
+選択肢B′(Vercel側のみの小さなCI判別分岐でGoogle公式テストシークレットキーに
+切り替え、`contact.cgi`は無変更のまま正常系送信も日次自動化)で確定した。**
+2章(2.1節#4・#4b、2.5節)、7章(GitHub Secrets一覧)に反映済み。実装詳細は
+`internal-spec-vercel.md` 9章を参照。
 
-**Q1. 問い合わせフォーム(`contact.cgi`)の自動疎通確認(2.1節#4)の範囲について**
-
-デプロイ後・毎日1回のPlaywrightスモークテストにおいて、`contact.cgi`の「正常系
-送信(実際のメール送信・受付ログ記録を伴う)」まで自動化するかどうか。
-
-- A) 本書の現行設計通り、疎通確認はバリデーションエラー経路のみ自動化し(reCAPTCHA
-  トークン不要)、実際にメールが送信される正常系送信テストは自動化しない。正常系の
-  確認はフェーズ8の手動テストチェックリスト(初回デプロイ時、`.htpasswd`年次更新時
-  等の節目)でのみ行う。
-- B) Google reCAPTCHA公式のテストキー(常に成功する専用サイトキー/シークレット
-  キー)をスモークテスト専用に登録し、実際に正常系の送信(実メール送信を伴う)を
-  毎日自動実行する。ただし本番の運営者メール(`mainagak@gmail.com`)へ日次で
-  テストメールが届き、`contact_log.txt`にも日次でテスト行が追記され続けることを
-  許容する必要がある。
-- C) 正常系送信テストは実施するが、`contact.cgi`にテスト専用モード(環境変数や
-  クエリパラメータでの切替)を追加し、テスト専用のTo/Fromメールアドレスを使うことで
-  本番運用データ(運営者メール・`contact_log.txt`)を汚染しない形にする。ただし
-  `contact.cgi`本体への実装変更(テストモード分岐の追加)が必要になり、本番相当の
-  コードパスと完全に同一ではなくなるという副作用がある。
-
-上記以外に、本書のスコープ(デプロイジョブ順序、Playwrightシナリオ、Perl/pytestの
-CI組み込み、バックアップ・ロールバック、CI/CD全体の実行順序)においてブロッキングな
-未決定事項はない。
+本書のスコープ(デプロイジョブ順序、Playwrightシナリオ、Perl/pytestのCI組み込み、
+バックアップ・ロールバック、CI/CD全体の実行順序)においてブロッキングな未決定事項は
+ない。
 
 ---
 

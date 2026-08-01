@@ -170,8 +170,6 @@ FAQ管理GUIのログインアカウント。複数アカウント対応(M節Q13
 | `is_active` | `BOOLEAN` | `NOT NULL DEFAULT true` | 無効化はレコード削除ではなくフラグで行う(退職・利用停止時)。 |
 | `failed_login_attempts` | `SMALLINT` | `NOT NULL DEFAULT 0` | ログイン試行回数制限用(O節Q7で確定)。ログイン成功時に0へリセット。 |
 | `locked_until` | `TIMESTAMPTZ` | `NULL` | 一時ロック解除時刻(UTC)。規定回数失敗で設定。 |
-| `password_reset_token` | `VARCHAR(128)` | `NULL` | パスワードリセット用トークン(O節Q4で確定、メールでのリセットリンク送付方式)。 |
-| `password_reset_token_expires_at` | `TIMESTAMPTZ` | `NULL` | トークン有効期限。 |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | |
 | `last_login_at` | `TIMESTAMPTZ` | `NULL` | |
@@ -247,9 +245,12 @@ faqs (1) ──< faq_change_log.faq_id (ON DELETE CASCADE)
   持たない(3.1節参照)。
 - ログイン試行回数制限: `failed_login_attempts`・`locked_until`カラムで実装
   (O節Q7)。
-- パスワードリセット: メールでリセットリンクを送る一般的なフロー(O節Q4)。
-  `password_reset_token`・`password_reset_token_expires_at`カラムで実装。
-  **ただし送信経路(どこからメールを送るか)は未確定 — 下記「追加質問」参照。**
+- パスワードリセット: **2026-08-02、内部仕様追加質問Q1への回答によりO節Q4の方針を
+  変更。** メールによる自動リセットは行わず、パスワードを忘れた場合は運営者が
+  Claude Codeに依頼し、`gui_accounts.password_hash`を直接UPDATEしてもらう運用とする
+  (Claude Codeがbcryptハッシュを生成しSQL発行、またはNeonダッシュボードのSQLエディタで
+  実施)。このためトークンカラム(`password_reset_token`等)は不要と判断し、上記
+  テーブル定義から削除済み。
 - IP制限: GUI自体へのアクセスをVercel側でもIP制限する(O節Q6)。これはデータベース
   スキーマではなくVercel側のミドルウェア/環境変数(許可IPリスト)で実現するため、
   本書ではテーブル定義を持たない(許可IPリストをDB管理する必要が生じた場合は
@@ -325,21 +326,9 @@ DB化しない(Cyberhome側テキストログ+メール通知)。データモデ
 
 ## 追加質問
 
-以下1件は、既存の280問の回答からは判断できない、genuinely未決定な事項。
-GUIアカウントの`gui_accounts`テーブル自体の設計(トークンカラムの保持)には影響しないが、
-実際にメールを送信する経路(Vercel側の送信手段)を決めないとPhase 6で環境変数設計が
-決まらないため、3択形式で確認したい。
+なし。**旧Q1(パスワードリセットメール送信経路)は2026-08-02にユーザーが選択肢C
+(メールリセットを廃止、Claude Codeによる手動DB更新に変更)で確定済み。** 上記
+3.5節・`gui_accounts`テーブル定義に反映済み。トランザクションメールAPI等の追加
+外部サービス導入は不要になった。
 
-**Q1. FAQ管理GUIのパスワードリセットメール(O節Q4で「メールでリセットリンクを送る
-一般的なフロー」を実装することは確定済み)を、Vercel(FastAPI)側からどの経路で
-送信するか?**
-
-- A) Vercel側に新たにトランザクションメールAPI(例: Resend、SendGridなどの無料枠)を
-  導入し、そこから送信する。
-- B) Cyberhome側`contact.cgi`の`sendmail`方式とは別に、Vercel側でGmail SMTP
-  (Pythonの`smtplib`+Googleアプリパスワード、既存の`api/send-email.js`が使っていた
-  構成のPython版に相当)を暫定的に使い、追加の外部サービス契約を避ける。
-- C) メールでのリセットは行わない方針に変更し、O節Q4の回答を見直して「忘れたら
-  Claude Codeに依頼してDBを直接更新してもらう」運用(O節Q4の選択肢B)に切り替える。
-
-上記以外に、本書のスコープ(データモデル)においてブロッキングな未決定事項はない。
+本書のスコープ(データモデル)においてブロッキングな未決定事項はない。

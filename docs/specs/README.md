@@ -19,20 +19,23 @@
 - `.gitattributes`でCGI/Perlファイルの改行コード(LF)を強制、コミットメッセージは
   英語統一、GitHubリポジトリはPrivateを維持。
 
-**2026-08-02フェーズ4完了:** ユーザー承認済みの6サブエージェント分割構成
+**2026-08-02フェーズ4完了・全追加質問解消:** ユーザー承認済みの6サブエージェント分割構成
 (Wave1: データモデル/リポジトリ・CI-CD/連携契約 → Wave2: Cyberhome側/Vercel側 →
 Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し、`docs/specs/internal-spec.md`
 (統合窓口)+6本の詳細設計ドキュメント(`internal-spec-datamodel.md`,
 `internal-spec-repo-cicd.md`, `internal-spec-integration.md`,
 `internal-spec-cyberhome.md`, `internal-spec-vercel.md`, `internal-spec-testing.md`)を
 作成した。Wave間の食い違い7件はすべて各エージェントが自己解決(内部仕様.md 2章に記録)。
-残る追加質問は当初想定の30問単位を大きく下回る**4件のみ**(内部仕様.md 3章)。
+残った追加質問4件もユーザーが即日回答し、全ドキュメントへ反映済み(GUIパスワード
+リセットはメール廃止・Claude Code代行に変更、`Contents/`はGit通常管理、CGI実行権限は
+自動前提のまま、問い合わせフォーム自動疎通確認はreCAPTCHA CI検証バイパスで正常系まで
+日次自動化)。**フェーズ4は完了。フェーズ5への引き継ぎ準備が整った。**
 
 **次回再開時に最初にやること:**
-1. `docs/specs/internal-spec.md`の「追加質問(4件)」への回答を得る。
-2. 回答を各詳細設計ドキュメントに反映する。
-3. フェーズ5(p5-internal-spec-reviewer、内部仕様最終レビュー・確定)に着手する。
-4. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
+1. フェーズ5(p5-internal-spec-reviewer、内部仕様最終レビュー・確定)に着手する。
+   `docs/specs/internal-spec.md`と6本の詳細設計ドキュメントの整合性を確認し、
+   承認または差し戻しを判断する。
+2. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
    詳細・実機確認事項)はフェーズ5以降と並行して確認する。
 
 **完了済み:**
@@ -83,8 +86,11 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
    残る追加質問は4件のみ(GUIパスワードリセットのメール経路、`Contents/`実ファイルの
    Git管理方針、CGIファイル実行権限、問い合わせフォーム自動疎通確認の範囲)。
 
+9. `docs/specs/internal-spec.md`の追加質問4件にユーザーが回答(2026-08-02、即日)。
+   全ドキュメントへ反映済み。特にQ4は当初のB案が`contact.cgi`無変更では技術的に
+   成立しないことが判明したため、Vercel側のみの小分岐(B′案)へ調整して合意。
+
 **残タスク:**
-9. `docs/specs/internal-spec.md`の追加質問4件への回答を得る。
 10. フェーズ5(p5-internal-spec-reviewer、内部仕様最終レビュー・確定)に着手する。
 11. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ5以降と並行して確認する。
 
@@ -102,7 +108,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 1 | 外部仕様調査 | p1-external-spec-researcher | [external-spec.md](external-spec.md) | 完了(DB選定のみフェーズ3/4へ委譲) |
 | 2 | 外部仕様最終レビュー・確定 | p2-external-spec-reviewer | external-spec.md (承認セクション追記) | 承認(2026-08-01、コメント3件は非ブロッキング) |
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
-| 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | ドラフト確定(2026-08-02)、追加質問4件回答待ち |
+| 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | 未着手(着手可能) |
 | 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 未着手 |
 | 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 未着手 |

@@ -778,10 +778,8 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 #   POST /api/admin/faqs/{id}/delete
 #   GET  /api/admin/accounts          アカウント一覧(要認証、O節Q3=A: GUI内から追加可能)
 #   POST /api/admin/accounts/new
-#   GET  /api/admin/password-reset/request
-#   POST /api/admin/password-reset/request
-#   GET  /api/admin/password-reset/confirm
-#   POST /api/admin/password-reset/confirm
+#   (パスワードリセットのメール経由フローは実装しない。2026-08-02確定。
+#    忘れた場合はClaude CodeがNeonへ直接UPDATEする運用)
 ```
 
 ### 7.2 認証ミドルウェア設計
@@ -823,13 +821,11 @@ async def get_current_admin(request: Request, db: AsyncSession = Depends(get_db)
   トークン(`hmac(ADMIN_SESSION_SECRET, session_id + form_name)`)を隠しフィールドで
   埋め込み、POST時に再計算・比較するダブルサブミット方式を採用する(追加ライブラリ
   導入コストを避ける)。
-- **パスワードリセット:** `internal-spec-datamodel.md`「追加質問Q1」
-  (メール送信経路が未確定)が本設計に直結する依存関係として残っている。本書では
-  `auth_service.send_password_reset_email()`のようなインターフェースの背後に実装を
-  隠蔽し、どの選択肢(A: Resend/SendGrid等、B: Vercel側Gmail SMTP、C: メール送信自体を
-  廃止しClaude Code代行)が採用されてもルーター・DBスキーマ側の変更が不要になるよう
-  設計する(本書独自の新規質問としては起票しない。既存の未解決事項として
-  `internal-spec-datamodel.md`を参照すること)。
+- **パスワードリセット:** **2026-08-02確定(`internal-spec-datamodel.md`追加質問Q1、
+  選択肢C):** メールによる自動リセットは実装しない。運営者がパスワードを忘れた場合は
+  Claude Codeに依頼し、Neonへ直接SQL(`UPDATE gui_accounts SET password_hash = ...`)を
+  発行して更新する運用とする。したがって`auth_service`にメール送信インターフェースは
+  不要(`/api/admin/password-reset/*`ルートも7.1節の一覧から削除)。
 
 ### 7.3 asyncpg + Neon 接続の実装方針(`app/db/session.py`)
 
@@ -869,8 +865,7 @@ templates/admin/
 ├── faq_edit.html          新規作成・編集共用フォーム(カテゴリはドロップダウン固定3択、R節Q28=A)
 ├── accounts_list.html
 ├── account_new.html
-├── password_reset_request.html
-└── password_reset_confirm.html
+└── (パスワードリセット画面は実装しない、2026-08-02確定)
 static/admin/
 └── admin.css               実務的な最低限のデザイン(N節Q29=A、見た目より機能性優先)
 ```
@@ -899,11 +894,62 @@ static/admin/
 | `DATABASE_URL`(将来) | GUI導入時に必須 | 本番Neonブランチ接続文字列 | Vercel-Neon統合による自動生成プレビューブランチ | FAQ管理GUI用DB接続 |
 | `ADMIN_SESSION_SECRET`(将来) | GUI導入時に必須 | 本番用ランダム値 | Preview用ランダム値(別値) | GUIセッション(JWT)署名鍵 |
 | `ALLOWED_ADMIN_IPS`(将来) | GUI導入時に必須 | 運営者の実IP/CIDR | 同上、またはテスト用に緩和 | GUI用IP制限 |
-| `PASSWORD_RESET_MAIL_*`(将来) | GUI導入時に必須(方式未確定) | - | - | パスワードリセットメール送信経路(`internal-spec-datamodel.md`追加質問Q1の解決待ち) |
+| `SMOKE_TEST_SECRET`(2026-08-02追加、9章参照) | 必須(Production・Playwrightスモークテスト用) | GitHub Secretsと同一のランダム値 | Preview不要(日次スモークは本番のみ対象) | CI専用reCAPTCHAテストキー分岐の判別 |
+| `RECAPTCHA_TEST_SECRET_KEY`(2026-08-02追加、9章参照) | 必須(Production) | Googleの公式テストシークレットキー固定値 | 不要 | `SMOKE_TEST_SECRET`一致時のみGoogle siteverify呼び出しに使用 |
 
 `.env.example`(`api/.env.example`)にはMVP必須の4変数(`RECAPTCHA_SECRET_KEY`,
 `INTEGRATION_HMAC_SECRET`, `ALLOWED_ORIGIN`, `VERCEL_ENV`)をダミー値付きで記載する
 (実値はコミットしない)。
+
+---
+
+## 9. reCAPTCHA CI検証バイパス(2026-08-02追加、`internal-spec-testing.md`追加質問Q1=B′の実装)
+
+`internal-spec-testing.md`が設計する日次Playwrightスモークテストで、`contact.cgi`の
+**正常系送信**(実メール送信・`contact_log.txt`への記録を伴う)まで自動化することが
+確定した(B′案)。Google reCAPTCHAは自動化された(人間が操作しない)チェックボックス
+操作を通常のフローでは通過できないため、Google公式の「常に成功を返すテスト用
+シークレットキー」(`6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe`、Google公式ドキュメント
+記載の固定値)を使う。ただし本番トラフィック全体をテストキー扱いにするとreCAPTCHAの
+実効性が失われるため、**CIからの呼び出しであることを検証した場合にのみ**テスト
+シークレットキーへ切り替える、Vercel側のみの小さな分岐を追加する。`contact.cgi`は
+一切変更しない(HMACトークンの検証ロジックは通常の送信と完全に同一)。
+
+### 9.1 `recaptcha_service.py`への追加ロジック
+
+```python
+def _resolve_secret_key(request_headers: dict, settings: Settings) -> str:
+    smoke_test_secret = request_headers.get("x-smoke-test-auth")
+    if smoke_test_secret and settings.SMOKE_TEST_SECRET and \
+       hmac.compare_digest(smoke_test_secret, settings.SMOKE_TEST_SECRET):
+        return settings.RECAPTCHA_TEST_SECRET_KEY  # Google公式テストシークレットキー
+    return settings.RECAPTCHA_SECRET_KEY  # 本番シークレットキー(通常のユーザー送信)
+```
+
+- `verify_recaptcha()`(3.3節)は`settings.RECAPTCHA_SECRET_KEY`を直接参照するのではなく、
+  上記`_resolve_secret_key(request.headers, settings)`の戻り値を使うよう変更する。
+- `X-Smoke-Test-Auth`ヘッダーは通常のブラウザからのリクエストには決して付与されない
+  (`site/js/contact-form.js`は付与しない)。GitHub Actionsの`playwright-smoke.yml`
+  のみが`SMOKE_TEST_SECRET`(GitHub Secrets)の値をこのヘッダーに設定して呼び出す。
+- `hmac.compare_digest`によるタイミング攻撃対策済みの比較を用いる(この値は実質的な
+  認証情報のため、`==`比較は避ける)。
+- Google公式テストキーは`recaptcha_response`の値を一切検証しないため、Playwright側は
+  ダミー文字列(例: `"smoke-test-bypass"`)を送るだけでよく、実際のウィジェット操作は
+  不要。
+- テストキーの利用によって発行されたHMACトークンは、通常の送信と全く同じ形式・
+  有効期限であり、`contact.cgi`側からは「reCAPTCHAを実際に解いた本物の送信」と
+  区別がつかない(区別する必要もない — HMACトークンが有効であることが唯一の
+  検証対象であるという既存の連携契約通り)。
+
+### 9.2 秘密情報
+
+| 変数名 | 保持場所 | 用途 |
+|---|---|---|
+| `SMOKE_TEST_SECRET` | Vercel環境変数(Production)+ GitHub Secrets(`playwright-smoke.yml`から`X-Smoke-Test-Auth`ヘッダーとして送信) | CI呼び出しの判別 |
+| `RECAPTCHA_TEST_SECRET_KEY` | Vercel環境変数(Production) | Google公式テストシークレットキー(値そのものは非秘密の公開情報だが、環境変数化してコード直書きを避ける) |
+
+`internal-spec-testing.md`側の実装詳細(Playwrightからのヘッダー付与、テスト専用の
+To/Fromメールアドレスの要否)は同ドキュメントを参照。
 
 ---
 
@@ -917,9 +963,10 @@ HMAC環境変数名、FAQファイル形式とAPI応答形式の関係)は、い
 一意に解決できる実装解釈の問題であり、ユーザーへの追加確認は不要と判断した。
 
 参考として、本書の設計が依存する既存の未解決事項(本書のブロッカーではないが、
-フェーズ10着手までに解消が必要)を再掲する:
-- `internal-spec-datamodel.md`「追加質問Q1」: FAQ管理GUIのパスワードリセットメール送信
-  経路(A: 外部トランザクションメールAPI/B: Vercel側Gmail SMTP/C: メール送信自体を廃止)。
-  7.2節の設計はどの選択肢が採られても影響を受けないよう抽象化してある。
+フェーズ6実装着手までに解消が必要)を再掲する:
 - `architecture.md`「追加質問6」: reCAPTCHAのサイトキー・シークレットキーの実際の登録
   状況(本書はキーの値そのものには依存しない設計だが、Phase 6実装着手までに登録が必要)。
+
+**2026-08-02追記:** `internal-spec-datamodel.md`旧追加質問Q1(パスワードリセット
+メール送信経路)はユーザー回答により決着済み(7.2節参照)。9章にてQ4(B′案、
+reCAPTCHA CI検証バイパス)の実装設計を追加した。

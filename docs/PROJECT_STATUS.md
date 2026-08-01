@@ -306,4 +306,32 @@ acd4883 chore: setup development environment with Node.js and Python
 
 **次のアクション:** `docs/specs/internal-spec.md`の追加質問4件への回答を得て、
 フェーズ5(p5-internal-spec-reviewer、内部仕様最終レビュー・確定)に着手する。
+
+## 2026-08-02: チェックポイント11 — 内部仕様の追加質問4件に回答、フェーズ4完全完了
+
+- ユーザーが`docs/specs/internal-spec.md`の追加質問4件に即日回答:
+  1. FAQ管理GUIのパスワードリセット: C) メール送信を廃止し、忘れた場合はClaude Codeが
+     NeonへSQLを直接発行して更新する運用に変更。`internal-spec-datamodel.md`の
+     `gui_accounts`テーブルから`password_reset_token`関連カラムを削除、
+     `internal-spec-vercel.md`の管理画面ルート一覧からリセット関連ルートを削除。
+  2. `Contents/`配下ダウンロードファイル: A) Gitで通常のバイナリ管理(除外設定・
+     LFSなし)に確定。
+  3. `.cgi`ファイルの実行権限: A) 自動実行可能の前提のまま進める(既存デフォルトを
+     確認)。
+  4. 問い合わせフォーム自動疎通確認: 当初のB案(Google公式テストキーで正常系も
+     毎日自動送信)を選んだが、**Cyberhome側`contact.html`が静的で環境による
+     出し分けができないため、`contact.cgi`を一切変更せずに実現するには
+     Vercel側`/api/verify-recaptcha`に最低限のCI判別分岐が必要**という技術的な
+     制約を発見・ユーザーに提示。ユーザー承認によりB′案(Vercel側のみに
+     `X-Smoke-Test-Auth`ヘッダー判定+Google公式テストシークレットキーへの
+     切替分岐を追加)に調整して確定。`internal-spec-vercel.md`に9章として実装設計を
+     新設、`internal-spec-testing.md`のシナリオ#4・2.5節・GitHub Secrets一覧を更新。
+- 6本の詳細設計ドキュメントすべてに反映済み。新たな未決定事項は発生していない。
+- `docs/specs/internal-spec.md`の承認ステータスを「全追加質問解消、フェーズ5引き継ぎ
+  準備完了」に更新。`docs/specs/README.md`のダッシュボード・進捗ボードも同期。
+- **フェーズ4(内部仕様調査)は完全に完了した。**
+
+**次のアクション:** フェーズ5(p5-internal-spec-reviewer、内部仕様最終レビュー・確定)に
+着手する。`docs/specs/internal-spec.md`と6本の詳細設計ドキュメントの整合性を確認し、
+承認または差し戻しを判断する。
 </content>

@@ -588,7 +588,7 @@ FTPS認証情報の扱いについては、ラウンド1 F40=Bにより「運営
 | 変数名 | Production | Preview | 用途 |
 |---|---|---|---|
 | `RECAPTCHA_SECRET_KEY` | 本番reCAPTCHAシークレット | テスト用またはProductionと共用 | Google siteverify呼び出し |
-| `HMAC_SHARED_SECRET` | Cyberhome側`conf/hmac_secret.txt`と一致する値 | ダミー値可(Preview環境からCyberhome本番CGIへ実接続することはない前提) | reCAPTCHA検証トークンの署名 |
+| `INTEGRATION_HMAC_SECRET` | Cyberhome側`conf/hmac_secret.txt`と一致する値 | ダミー値可(Preview環境からCyberhome本番CGIへ実接続することはない前提) | reCAPTCHA検証トークンの署名 |
 | `DATABASE_URL`(将来、Neon導入時) | 本番Neonブランチ接続文字列 | Vercel-Neon統合による自動生成プレビューブランチ接続文字列 | FAQ管理GUI用DB接続 |
 | `ADMIN_SESSION_SECRET`(将来) | 本番用ランダム値 | Preview用ランダム値(別値) | GUIセッション/JWT署名鍵 |
 

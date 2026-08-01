@@ -256,7 +256,9 @@ faqs (1) ──< faq_change_log.faq_id (ON DELETE CASCADE)
   本書ではテーブル定義を持たない(許可IPリストをDB管理する必要が生じた場合は
   `gui_allowed_ips (id, ip_cidr, note, created_at)`のような小テーブルを追加する
   余地を残しておく)。
-- CSRF対策: FastAPIの標準的なCSRFトークン機構を使用(O節Q5)。DBスキーマへの影響なし。
+- CSRF対策: FastAPI自体には標準搭載のCSRF機構は存在しないため、セッション紐付けトークンを
+  用いたダブルサブミット方式を独自実装する(O節Q5、詳細は`internal-spec-vercel.md` 7.2節を
+  参照)。DBスキーマへの影響なし。
 
 ---
 

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jyoho1.web.cyberhome.ne.jp/sitemap.xml

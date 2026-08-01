@@ -11,7 +11,27 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(git pull *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git reset *)",
+      "Bash(gh pr create --title 'feat: implement homepage with responsive design and multi-environment setup' --body ' *)",
+      "Bash(cp -r src/css .)",
+      "Bash(cp -r src/js .)",
+      "Bash(gh repo *)",
+      "Bash(curl -I https://mainagak.github.io/homepage/)",
+      "Bash(gh pr create --title 'feat: implement responsive homepage with multi-environment deployment \\(Phase 1\\)' --body ' *)",
+      "Bash(Get-ChildItem -Path . -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(gh api *)",
+      "Bash(git ls-tree *)",
+      "Bash(nslookup jyoho1.web.cyberhome.ne.jp)",
+      "Bash(nslookup -type=CNAME jyoho1.web.cyberhome.ne.jp)",
+      "Bash(git rm *)",
+      "Bash(rm -rf src)",
+      "Bash(rm -f js/slider.js)",
+      "Bash(rm -rf .github)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(git config *)",
+      "Bash(gh auth *)"
     ]
   }
 }

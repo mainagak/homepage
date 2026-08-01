@@ -516,3 +516,83 @@ Vercel側FastAPI実装、テスト・CI/CD詳細実装)に着手する。Vercel�
 `models/`・`services/`・`db/`・`templates/`・`static/`)を新規実装すればよい。
 本タスクはデータモデル・単体テストのみであり、システムテスト・E2Eテスト
 (フェーズ7・8)はまだ実施していない。
+
+## 2026-08-02: チェックポイント15 — フェーズ6 Task#4(Vercel/FastAPI実装、Wave2)完了
+
+- `docs/specs/internal-spec-vercel.md`(+`internal-spec-integration.md`のVercel側契約)に
+  基づき、`/api`配下にFastAPIアプリ本体一式を新規実装した。`api/app/data/faq.json`
+  (Task#2で作成済み)以外の`api/app/`配下は本タスクで新規作成。
+- **実装したファイル:**
+  - `api/index.py`(Vercelエントリポイント、`app.main.app`をre-export)
+  - `api/app/main.py`(FastAPI生成、lifespan起動時FAQ検証、CORSMiddleware、
+    ルーター登録。管理GUI用`admin`ルーターは1.1節の通りコメントアウトのまま)
+  - `api/app/core/config.py`(pydantic-settings、環境変数`INTEGRATION_HMAC_SECRET`
+    表記で統一済み。9章のCI検証バイパス用に`SMOKE_TEST_SECRET`・
+    `RECAPTCHA_TEST_SECRET_KEY`も追加)、`logging_config.py`、`request_utils.py`
+    (`get_client_ip`、`X-Forwarded-For`優先)
+  - `api/app/middleware/rate_limit.py`(5章の簡易インメモリレート制限、
+    `/api/faq`=60回/5分、`/api/verify-recaptcha`=10回/5分)
+  - `api/app/models/faq.py`(ファイル用`FaqFile`/`FaqFileItem`とAPI応答用
+    `FaqApiResponse`/`FaqApiItem`を分離、0.3節の変換層設計通り)、
+    `api/app/models/recaptcha.py`(`RecaptchaOutcome`)
+  - `api/app/services/faq_service.py`(`faq.json`読み込み・検証・カテゴリ順
+    ソート・API形式への変換、`lru_cache`)、
+    `api/app/services/recaptcha_service.py`(Google siteverify呼び出し、
+    fail-open/fail-closedの分岐、HMACトークン発行、9章のCI検証バイパス用
+    `_resolve_secret_key`を実装)
+  - `api/app/routers/faq.py`(`GET /api/faq`)、`recaptcha.py`
+    (`POST /api/verify-recaptcha`、リクエストボディを手動パースし契約通りの
+    400/500を返す設計、3.2節の通り)、`health.py`(`GET /health`、プレフィックスなし)
+  - `api/tests/conftest.py`・`test_faq.py`(12ケース)・`test_recaptcha.py`
+    (14ケース)・`test_health.py`(3ケース)、合計**29ケース**(6.3/6.4/6.5節の
+    テスト計画表と1対1で対応)
+  - `api/requirements.txt`に`pydantic-settings`・`httpx`を追加
+    (recaptcha_service.pyの本番実行に必須。1.3節の指示通りpydantic-settingsを
+    追加。httpxは本番コードが直接importするため、6.1節がdev依存として提案して
+    いたものを本番側にも追加した。**Task#1が置いたrepo-cicd.md準拠の当初内容には
+    含まれていなかった、実装上必要な追加**)。`requirements-dev.txt`に
+    `pytest-asyncio`・`respx`を追加(6.1節の提案通り)。
+  - `.gitignore`に`api/.ruff_cache/`を追加(ruff実行で生成される、既存の
+    `.pytest_cache`除外と同様の追加)。
+- **`app/db/`・`app/templates/`・`app/static/`・`app/routers/admin.py`・
+  `app/services/auth_service.py`は意図的に作成していない。** 7章冒頭が
+  「本節は保守サイクル(フェーズ10)での実装対象であり、フェーズ6(実装)の
+  スコープ外である」と明記しているため、スタブすら作らずフェーズ10に委ねた。
+- **タスク指示とinternal-spec-vercel.mdの間で見つけたギャップ(フェーズ4/5への
+  フィードバック、ブロッカーではない、CSRF実装は見送り):** 本タスクの実装指示には
+  「CSRF double-submit-cookie implementation per §7.2」という一文があったが、
+  `internal-spec-vercel.md` 7.2節は「7. 将来のFAQ管理GUI付録」節の内部にあり、
+  同節冒頭に明示的に「本節は保守サイクル(フェーズ10)での実装対象であり、
+  フェーズ6(実装)のスコープ外である」と記載されている。また7.2節のCSRF設計は
+  Jinja2管理画面フォーム(`{{ csrf_token }}`)向けであり、本タスクが実装した
+  `GET /api/faq`・`POST /api/verify-recaptcha`・`GET /health`はいずれもCookie・
+  セッションを一切使わないステートレスJSON APIで、CSRFの前提となる
+  「ブラウザが自動送信する認証Cookie」が存在しない(6章のpytestテスト計画
+  (12+14+3=29件)にもCSRF関連テストは1件も含まれていない)。管理GUI自体
+  (`admin.py`ルーター)もフェーズ10まで未実装であるため、CSRF対策を適用する
+  対象ルートが現時点で存在しない。以上により、**本タスクではCSRFミドルウェアを
+  実装していない**(スコープ外の機能を先取りして作り込むと7章が明示的に戒めて
+  いる「フェーズ10で設計をゼロから起こし直さずに済むよう先に記録した設計」を
+  先取り実装することになり、実装者の裁量を超えると判断した)。フェーズ10で
+  FAQ管理GUI(`admin.py`)に着手する際に、7.2節の設計に従ってCSRF対策を
+  実装すべき。
+- **単体テスト実行結果:** ローカルにPython 3.12.10が導入済み(前タスクの
+  `winget install Python.Python.3.12`による)。`api`配下で
+  `pip install -r requirements.txt -r requirements-dev.txt`を実行後、
+  `python -m pytest tests -v`を実行 → **29件全て成功(3.3〜3.6秒程度)**。
+  `python -m ruff check app index.py tests`も実施し、インポート順序の
+  自動修正(`--fix`)+`except Exception`への`noqa`コメント追加を経て
+  **All checks passed**を確認した。respxでGoogle siteverify呼び出しを
+  モックし、実際のGoogle API・実際の`RECAPTCHA_SECRET_KEY`・実際の
+  `INTEGRATION_HMAC_SECRET`はいずれも使用していない(テスト専用のダミー値
+  `test-recaptcha-secret`/`test-hmac-secret`等を`conftest.py`で設定)。
+  実際のVercelデプロイ・実際のGoogle reCAPTCHA本番キーでの動作確認は
+  一切行っていない。
+- 本チェックポイントの後、gitコミットを実施する(実装+テストコード+
+  ドキュメント更新をまとめる)。
+
+**次のアクション:** フェーズ6の残りタスク(Cyberhome側CGI実装は並行タスクとして
+別途進行中、テスト・CI/CD詳細実装)に着手する。本タスクはあくまで単体テスト
+(pytest 29ケース)までであり、システムテスト・E2Eテスト(フェーズ7・8)は
+まだ実施していない。上記CSRFのギャップはフェーズ10(FAQ管理GUI実装)着手時に
+解消すること。

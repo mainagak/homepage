@@ -6,6 +6,15 @@
 内部仕様最終レビュー)が完了。`docs/specs/internal-spec.md`は2026-08-02に**承認**され、
 フェーズ6(実装・単体テスト)へ着手可能な状態になった。**
 
+**2026-08-02フェーズ6 Task#4(Vercel/FastAPI実装、Wave2)完了:**
+`internal-spec-vercel.md`に基づき`/api`配下にFastAPIアプリ本体
+(`app/main.py`・`core/`・`middleware/`・`routers/`・`models/`・`services/`)を新規実装。
+`GET /api/faq`・`POST /api/verify-recaptcha`(9章のCI検証バイパス分岐含む)・
+`GET /health`+簡易インメモリレート制限(5章)を実装し、pytest単体テスト29ケース
+(6.3/6.4/6.5節と1対1対応)全件成功、ruffもクリーン。管理GUI関連(7章、Phase 10
+スコープ)は未着手のまま。CSRF実装(7.2節)はスコープ外と判断し見送り、ギャップとして
+記録した(詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照)。
+
 **2026-08-02フェーズ6 Task#2(データモデル)完了:**
 `internal-spec-datamodel.md`に基づき、MVP実データファイル`api/app/data/faq.json`
 (FAQ 0件で開始)、参照用JSON Schema(`docs/specs/data/faq.schema.json`)、将来のNeon
@@ -136,13 +145,24 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
     pytest単体テスト50ケース(`scripts/tests/test_validate_faq.py`、全件成功)を実装。
     詳細は`docs/PROJECT_STATUS.md`チェックポイント14参照。
 
+13. **フェーズ6 Task#4(Vercel/FastAPI実装、Wave2)完了(2026-08-02):**
+    `internal-spec-vercel.md`に基づき`/api`配下にFastAPIアプリ本体一式
+    (`main.py`・`core/`・`middleware/`・`routers/`・`models/`・`services/`)を
+    新規実装。`GET /api/faq`・`POST /api/verify-recaptcha`(9章CI検証バイパス含む)・
+    `GET /health`・簡易インメモリレート制限(5章)を実装し、pytest単体テスト29ケース
+    (`api/tests/`、6.3/6.4/6.5節と1対1対応)全件成功、ruffクリーン。管理GUI(7章、
+    Phase 10スコープ)は未着手。詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照。
+
 **残タスク:**
-13. フェーズ6の残りタスク(連携契約実装、Cyberhome側CGI実装、Vercel側
-    FastAPI実装、テスト・CI/CD詳細実装)に着手する。
-14. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
-15. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
+14. フェーズ6の残りタスク(連携契約実装は本タスクでVercel側分を実装済み、
+    Cyberhome側CGI実装は並行タスクで進行中、テスト・CI/CD詳細実装)に着手する。
+15. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
+16. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
     現行方針と不整合)の扱いを整理する(非ブロッキング、詳細は
     `docs/PROJECT_STATUS.md`チェックポイント13の「フェーズ4/5へのフィードバック」参照)。
+17. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
+    ダブルサブミット方式を`admin.py`ルーターとともに実装する(Task#4では
+    スコープ外と判断し見送った、詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照)。
 
 ---
 
@@ -160,7 +180,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
 | 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
-| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、Task#2: データモデル 完了、2026-08-02) |
+| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、Task#2: データモデル 完了、Task#4: Vercel/FastAPI実装 完了、2026-08-02) |
 | 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 未着手 |
 | 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 未着手 |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |

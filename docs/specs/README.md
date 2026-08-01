@@ -4,20 +4,15 @@
 
 **現在地:** フェーズ1(外部仕様調査)は未着手。`docs/specs/external-spec.md` はまだ存在しない。
 
-**直前に依頼されて、まだ完了していないタスク:**
-1. `git push` を実行したが**タイムアウトし、まだ完了していない**。
-   - 確認済み事実: `origin/main` は `7319f1d` のまま。ローカルは `69c1519` まで3コミット進んでおり、
-     `git status` は `ahead 3` と表示される。
-   - 再開後、まず `git push` を再実行し、認証プロンプト等で止まっていないか確認すること。
-     (タイムアウトの原因は未調査。資格情報/ネットワークの可能性あり)
-2. ユーザーから「フェーズ1で決める事リストを30出してください。まとめて整理して回答します」と
-   依頼されている。**まだリストを出力していない**(git push待ちで中断)。
-   - 次にやること: `docs/specs/README.md` の「スコープメモ」節にある3機能領域
-     (①ホームページ仕様 ②問い合わせチャット機能 ③コンテンツダウンロード)ごとに、
-     外部仕様(`docs/specs/external-spec.md`)を書き始める前にユーザーに確認すべき
-     決定事項を、合計30項目・カテゴリ別に整理して提示する。
-   - このタスクは p1-external-spec-researcher のスコープ内(仕様ドラフト前の調査)。
-     `docs/specs/external-spec.md` はまだ作らず、質問リストの提示を先に行うこと。
+**完了済み:**
+1. `git push` は `gh auth setup-git` でGCMの詰まりを回避し、完了済み(`origin/main` = `0f6c50c`)。
+
+**進行中のタスク:**
+2. 30項目の決定事項リストは `docs/specs/external-spec.md` に提示済み(2026-08-01)。
+   **ユーザーからの回答待ち。** 回答が届いたら、それを反映して
+   `docs/specs/external-spec.md` を実際の外部仕様ドラフトに書き直し、
+   「スコープ外」「未解決事項」の節も埋めること。全て埋まったらフェーズ2
+   (p2-external-spec-reviewer)へ引き継ぐ。
 
 ---
 
@@ -31,7 +26,7 @@
 
 | # | フェーズ | 担当エージェント | 成果物 | ステータス |
 |---|---------|-----------------|--------|-----------|
-| 1 | 外部仕様調査 | p1-external-spec-researcher | [external-spec.md](external-spec.md) | 未着手 |
+| 1 | 外部仕様調査 | p1-external-spec-researcher | [external-spec.md](external-spec.md) | 調査中(30項目の質問リスト提示済み・回答待ち) |
 | 2 | 外部仕様最終レビュー・確定 | p2-external-spec-reviewer | external-spec.md (承認セクション追記) | 未着手 |
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | 未着手 |
 | 4 | 内部仕様調査 | p4-internal-spec-researcher | [internal-spec.md](internal-spec.md) | 未着手 |

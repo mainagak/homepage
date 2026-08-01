@@ -679,8 +679,13 @@ vercel.json                 → /api のみを対象にする設定へ全面書�
 4. **reCAPTCHA:** v2(チェックボックス)を採用し、検証はVercel(FastAPI)が代行、
    Cyberhome側へは署名付きトークン(HMAC-SHA256、Perlコアの`Digest::SHA`で検証)を
    引き渡す方式とする。
-5. **データベース:** MVPでは導入しない。将来必要になった時点でNeon(Postgres)を
-   第一候補、Web GUI開発コストをゼロにしたい場合はAirtableを候補とする。
+5. **データベース:** MVP初回リリース自体は引き続き導入しない(問い合わせ履歴は
+   Cyberhome側テキストログ、FAQは静的JSON)。**2026-08-02、フェーズ4準備の
+   「インフラ深掘りラウンド」での確認により前倒し方針を追加確定:** FAQ管理Web GUI
+   (保守サイクル最優先タスクとして早期着手予定)の導入と同時にNeon(Postgres)を
+   導入する。スコープはFAQ管理用に限定し、問い合わせフォーム処理(Cyberhome Perl CGI
+   +テキストログ)には影響しない。詳細は`docs/specs/phase4-clarification.md`
+   「インフラ深掘りラウンド1/5・2/5」を参照。
 6. **ダウンロード機能・QRコード遷移ページ:** Apache Basic認証(`.htaccess`+`.htpasswd`)
    で保護し、実ファイル配信はPerl CGI(`download.cgi`)経由にしてアクセスログを
    自前記録する。ファイルは`Contents/book1/`・`Contents/book2/`配下に半角英数字命名で

@@ -42,3 +42,19 @@ htmlcov/
 # macOS
 .AppleDouble
 .LSOverride
+
+# Cyberhome側の非公開設定・実パスワード・生成ログ(Git管理外)
+site/dl/.htpasswd
+site/qr/.htpasswd
+site/conf/hmac_secret.txt
+site/**/access_log.txt
+site/**/contact_log.txt
+site/**/contact_error_log.txt
+
+# Vercel/Python
+api/.env
+api/.env.local
+api/__pycache__/
+api/**/__pycache__/
+api/*.pyc
+api/.pytest_cache/

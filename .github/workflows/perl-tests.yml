@@ -1,0 +1,24 @@
+name: perl-tests
+
+# Non-destructive addition confirmed by docs/specs/internal-spec-testing.md 3.2
+# (proposed in internal-spec-cyberhome.md 6.5). Not required as a branch-protection
+# status check, same rationale as api-tests.yml (internal-spec-repo-cicd.md 6.2).
+# NOTE (scaffolding): site/cgi-bin/lib/t/*.t are added by a later Phase 6 task
+# (Cyberhome側実装).
+
+on:
+  pull_request:
+    paths: ["site/cgi-bin/**"]
+  push:
+    branches: [main]
+    paths: ["site/cgi-bin/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Perl version (informational)
+        run: perl -v
+      - name: Run Test::More suite
+        run: prove -l site/cgi-bin/lib/t/

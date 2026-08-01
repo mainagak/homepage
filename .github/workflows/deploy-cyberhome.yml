@@ -1,0 +1,115 @@
+name: deploy-cyberhome
+
+# Deploys site/ to Cyberhome (Apache) via FTPS Explicit.
+# Design source: docs/specs/internal-spec-repo-cicd.md 3.1, refined by
+# docs/specs/internal-spec-testing.md 1.1-1.5.
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**"]
+  workflow_dispatch: {}
+
+jobs:
+  # Always runs before deploy, unconditionally, so a rollback point always exists.
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+      - name: Mirror-download current /public_html via FTPS
+        env:
+          FTP_HOST: ${{ secrets.CYBERHOME_FTP_HOST }}
+          FTP_USER: ${{ secrets.CYBERHOME_FTP_USER }}
+          FTP_PASS: ${{ secrets.CYBERHOME_FTP_PASSWORD }}
+        run: |
+          mkdir -p backup_public_html
+          lftp -u "$FTP_USER,$FTP_PASS" -e "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            mirror --parallel=2 /public_html ./backup_public_html;
+            bye" "$FTP_HOST"
+      - name: Archive backup
+        run: |
+          STAMP=$(date -u +%Y%m%d%H%M%S)
+          echo "BACKUP_NAME=cyberhome-backup-${STAMP}-${{ github.run_number }}" >> "$GITHUB_ENV"
+          tar -czf "cyberhome-backup-${STAMP}-${{ github.run_number }}.tar.gz" backup_public_html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_NAME }}
+          path: cyberhome-backup-*.tar.gz
+          retention-days: 90
+
+  deploy:
+    needs: backup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Cyberhome via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.CYBERHOME_FTP_HOST }}
+          username: ${{ secrets.CYBERHOME_FTP_USER }}
+          password: ${{ secrets.CYBERHOME_FTP_PASSWORD }}
+          protocol: ftps
+          port: ${{ secrets.CYBERHOME_FTP_PORT }}
+          local-dir: site/
+          server-dir: ${{ secrets.CYBERHOME_PUBLIC_HTML_PATH }}
+          exclude: |
+            **/.ftpdeployignore
+            cgi-bin/lib/t/**
+      - name: Summary
+        run: |
+          echo "### Cyberhome deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployed at: $(date -u +%FT%TZ)" >> "$GITHUB_STEP_SUMMARY"
+
+  smoke-test:
+    needs: deploy
+    uses: ./.github/workflows/playwright-smoke.yml
+    with:
+      triggered_by: "deploy-cyberhome"
+    secrets: inherit
+
+  notify-on-failure:
+    needs: [backup, deploy, smoke-test]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const failedJob = ${{ toJSON(needs) }};
+            const label = "deploy-failure";
+            const title = `Cyberhome deploy failed (run #${context.runNumber})`;
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: "open", labels: label,
+            });
+            const body = [
+              "## デプロイ失敗通知(自動生成)",
+              "",
+              `- 対象コミット: ${context.sha}`,
+              `- ワークフロー実行: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `- 失敗ジョブ状況: backup=${failedJob.backup.result}, deploy=${failedJob.deploy.result}, smoke-test=${failedJob['smoke-test'].result}`,
+              "",
+              "### 推奨対応",
+              "1. 上記ワークフロー実行のログを確認する",
+              "2. smoke-test が失敗した場合、本番サイト(https://jyoho1.web.cyberhome.ne.jp/)を目視確認する",
+              "3. 必要であれば直近のバックアップアーティファクトからロールバックする(docs/specs/internal-spec-repo-cicd.md 5.2節・docs/specs/internal-spec-testing.md 5章)",
+              "4. 原因を修正後、再度 push または workflow_dispatch で再実行する",
+            ].join("\n");
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing[0].number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: [label], assignees: ["mainagak"],
+              });
+            }

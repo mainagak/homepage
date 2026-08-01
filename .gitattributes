@@ -1,0 +1,34 @@
+# デフォルト: テキストファイルは常にLFで正規化(チェックアウト時もLFのまま)
+* text=auto eol=lf
+
+# Cyberhome側CGI/Perlファイルは改行コードLFを強制(Cyberhomeの仕様上CRLFはCGIとして
+# 動作しない可能性が高いため、リポジトリ内・FTPS転送前の時点で必ずLFに統一する)
+*.cgi text eol=lf
+*.pl  text eol=lf
+*.pm  text eol=lf
+
+# .htaccess もApache設定ファイルとしてLF統一(Cyberhome同様の理由)
+.htaccess text eol=lf
+
+# Python/JSON/YAML/Markdown等の一般的なテキストファイルは通常のLF正規化のみ
+*.py   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.txt  text eol=lf
+
+# バイナリファイルは改行変換対象外であることを明示(ダウンロード特典ファイル等)
+*.pdf  binary
+*.xls  binary
+*.xlsx binary
+*.doc  binary
+*.docx binary
+*.ppt  binary
+*.pptx binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary

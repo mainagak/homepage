@@ -1,0 +1,28 @@
+name: api-tests
+
+# Design source: docs/specs/internal-spec-repo-cicd.md 3.3, confirmed unchanged by
+# docs/specs/internal-spec-testing.md 4.1.
+# NOTE (scaffolding): api/tests/*.py are added by a later Phase 6 task (Vercel側実装).
+# Not required as a branch-protection status check (internal-spec-repo-cicd.md 6.2).
+
+on:
+  pull_request:
+    paths: ["api/**"]
+  push:
+    branches: [main]
+    paths: ["api/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install dependencies
+        run: pip install -r api/requirements.txt -r api/requirements-dev.txt
+      - name: Lint
+        run: ruff check api/
+      - name: Run tests
+        run: pytest api/tests

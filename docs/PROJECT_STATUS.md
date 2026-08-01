@@ -182,3 +182,25 @@ acd4883 chore: setup development environment with Node.js and Python
 
 **次のアクション:** ユーザーから32項目への回答を得る。回答後、`docs/specs/architecture.md`
 の技術要件導出・候補比較・決定事項を確定させ、フェーズ4(内部仕様調査)へ引き継ぐ。
+
+---
+
+## 2026-08-01: チェックポイント6 — 未コミット削除の整理、`/clear`前の保存
+
+- 作業ツリーに未コミットの削除(`README.md`・`package.json`・`.gitignore`)が残っていることに
+  気付き、内容を確認した。`README.md`と`package.json`は「GitHub Pagesを本番とする」旧方針
+  (チェックポイント3で上書き済み)を前提にした古い内容だったため、ユーザーの判断で
+  **削除を確定してコミット**(`007e9a3`)。`.gitignore`は方針変更と無関係な内容
+  (node_modules/.env除外)だったため**復元**し、同コミットに含めた。これにより
+  `node_modules/`・`.env.local`が未追跡ファイルとして出ていた状態も解消。
+- `.claude/settings.local.json`のローカル権限差分(git reset、gh pr create、rm -rf src等の
+  許可追加)も同コミットに含めて保存。
+- コミット後、作業ツリーはクリーン。ローカルの`main`はorigin/mainより4コミット進んでいる
+  (push未実施、ユーザーからの指示待ち)。
+- ユーザーはこの後`/clear`を実行し、再開後すぐにフェーズ3の32項目質問リストへの回答を
+  投入する予定。**次回再開時は、まず本ファイルと`docs/specs/README.md`を読み、
+  `docs/specs/architecture.md`の32項目に対するユーザーの回答を受け取ってから、
+  「技術要件」「候補と比較」「決定事項」の確定に進むこと。**
+
+**次のアクション:** ユーザーからの32項目回答を待つ(`/clear`後、直ちに投入される見込み)。
+回答が来たら`docs/specs/architecture.md`を確定させ、フェーズ4へ引き継ぐ。

@@ -7,7 +7,7 @@ const path = require('path');
 const url = require('url');
 
 const PORT = process.env.PORT || 3000;
-const SRC_DIR = path.join(__dirname, '../src');
+const SRC_DIR = path.join(__dirname, '..');
 
 const mimeTypes = {
     '.html': 'text/html',

@@ -50,18 +50,21 @@ Automatic deployment on `main` branch push:
 ## Project Structure
 
 ```
-src/
+/ (repository root — served directly by GitHub Pages)
 ├── index.html          # Main homepage
-├── forms.html          # Contact form (Plan 2)
-├── chat.html           # Chatbot UI (Plan 3)
 ├── css/                # Stylesheets
+│   ├── reset.css
 │   ├── style.css
 │   └── responsive.css
 ├── js/                 # JavaScript
 │   ├── main.js
 │   └── utils.js
-└── assets/             # Images and icons
+├── api/                # Vercel Functions (backend)
+│   └── send-email.js
+└── public/             # robots.txt, sitemap.xml
 ```
+
+`chat.html` (chatbot UI) is planned but not yet implemented.
 
 ## Development Tools
 

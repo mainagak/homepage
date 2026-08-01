@@ -158,3 +158,27 @@ acd4883 chore: setup development environment with Node.js and Python
 - ユーザーは本日夜に作業再開予定。再開までの間に`external-spec.md`へ本人が加筆修正を
   行う可能性がある。**再開時は必ずファイルを読み直し、このチェックポイント
   (commit `076cdde`)から変更があるか確認すること。**
+
+---
+
+## 2026-08-01: チェックポイント5 — フェーズ3着手、質問リスト32項目を提示
+
+- `external-spec.md` を再確認し、承認時点(commit `076cdde`)から変更がないことを確認した
+  上でフェーズ3(利用アーキテクチャー調査)に着手。
+- 現行リポジトリ構成(`package.json`/`vercel.json`/`api/send-email.js`/`.env.example`等)を
+  調査し、既存資産(nodemailer+Gmail SMTP実装済み・未動作、GitHub Pages前提の統合構成、
+  Vercel側は静的サイト全体も配信する設定になっており確定済みホスティング方針と不整合、
+  `chat.html`未実装、ダウンロード機能未着手)を把握した。
+- Phase 1と同様の2段階方式(質問提示→回答待ち→ドラフト確定)を採用し、以下8領域・
+  32項目の質問リストを作成し `docs/specs/architecture.md`(ステータス「調査中」)に記載:
+  A. Cyberhome/Apache側技術スタック(9問) / B. Vercel側技術スタック(7問) /
+  C. データベース選定(4問) / D. 認証・秘密情報管理(2問) / E. Cyberhome⇔Vercel連携
+  (3問) / F. リポジトリ構成・デプロイフロー(3問) / G. 開発・テスト環境・監視(2問) /
+  H. コスト・運用の制約(2問)。
+- `docs/specs/architecture.md`の「技術要件」「候補と比較」「決定事項」は未記入のまま
+  (回答待ちのため意図的に空欄)。`docs/specs/README.md`の進捗ボード・未解決事項も
+  この状態に合わせて更新済み。
+- コードは書いていない。実装作業は未着手のまま。
+
+**次のアクション:** ユーザーから32項目への回答を得る。回答後、`docs/specs/architecture.md`
+の技術要件導出・候補比較・決定事項を確定させ、フェーズ4(内部仕様調査)へ引き継ぐ。

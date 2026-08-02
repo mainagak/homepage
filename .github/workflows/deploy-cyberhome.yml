@@ -25,11 +25,12 @@ jobs:
           FTP_PASS: ${{ secrets.CYBERHOME_FTP_PASSWORD }}
         run: |
           mkdir -p backup_public_html
-          lftp -u "$FTP_USER,$FTP_PASS" -e "
+          lftp -c "
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
+            open -u \"$FTP_USER,$FTP_PASS\" \"$FTP_HOST\";
             mirror --parallel=2 /public_html ./backup_public_html;
-            bye" "$FTP_HOST"
+            bye"
       - name: Archive backup
         run: |
           STAMP=$(date -u +%Y%m%d%H%M%S)

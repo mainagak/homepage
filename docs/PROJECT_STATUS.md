@@ -1245,3 +1245,136 @@ p7-system-testerが別途実施するものであり、本チェックポイン�
 差し戻す。修正完了後、`docs/specs/e2e-test-report.md`のシナリオ10・11(reCAPTCHA
 連携・エラー時再描画)を実際のブラウザで再テストし、合格判定を得てからフェーズ9
 (最終レビュー)へ進むこと。**フェーズ9はまだ着手できない。**
+
+## 2026-08-02: チェックポイント23 — フェーズ6差し戻し対応、スクリプト競合修正+GA4/ロゴ追加実装完了
+
+チェックポイント22(フェーズ8不合格判定)で差し戻された「発見した問題1」(ブロッキング)、
+および非ブロッキングだが対応推奨とされた「発見した問題2」(GA4未実装)・「発見した問題3」
+(ロゴ画像未実装)を実装した。
+
+- **問題1(ブロッキング)の修正: `site/js/chat-widget.js`・`site/js/contact-form.js`を
+  それぞれ即時関数式(IIFE)で全体を包んだ。** 根本原因は「2つの独立したclassic
+  `<script>`タグが素朴にトップレベル`const`/`function`を宣言し、グローバル
+  レキシカル環境を共有してしまう」という構造自体であり、`VERCEL_API_BASE_URL`の
+  リネームだけでは同種の再発を防げないと判断し、両ファイルにそれぞれ独立した
+  スコープを持たせる方式を採用した(E2Eレポートの推奨案(a))。
+  - 両ファイルの他のトップレベル識別子(`FAQ_FETCH_TIMEOUT_MS`/
+    `resolveContactPagePath`等 chat-widget.js側、`VERIFY_RECAPTCHA_TIMEOUT_MS`/
+    `restoreFieldValues`等 contact-form.js側)を突き合わせたところ、衝突していた
+    のは`VERCEL_API_BASE_URL`のみだった(記録として確認済み)。
+  - reCAPTCHAウィジェットの`data-callback="onRecaptchaSuccess"`/
+    `data-expired-callback="onRecaptchaExpired"`は関数名を`window`プロパティとして
+    解決するため、`contact-form.js`のIIFE内でこの2関数のみ`window.onRecaptchaSuccess
+    = onRecaptchaSuccess`のように明示的に公開した。他の関数(`verifyRecaptcha`/
+    `showRecaptchaError`等)はIIFE内に留め、意図せず外部に漏れないようにした。
+  - `node --check`で両ファイルの構文を確認した上で、実際にPlaywright(Chromium)+
+    ローカルPython HTTPサーバー(`site/`を非CGI配信)で`contact.html`を開き、
+    以下を実機確認した(一時スクリプト、確認後削除、`git status`で副作用なしを確認):
+    1. コンソールエラー・ページエラーがいずれも0件。
+    2. `typeof window.onRecaptchaSuccess === 'function'`
+       `typeof window.onRecaptchaExpired === 'function'`(いずれも確認、
+       チェックポイント22で報告された`undefined`から復旧)。
+    3. `chat-widget.js`側のFAQトグルボタン(`#faq-widget-toggle`)も同時に存在
+       することを確認(回帰なし)。
+    4. `page.route`で`contact.html`のレスポンス本文を、`contact.cgi`が実際に
+       出力する形式(`<!--VALUE:field_name-->`が値で置換された`value-holder`
+       span)を模したHTMLに差し替えて再読み込みし、`restoreFieldValues()`が
+       実際に姓・名・メール・本文の4フィールドすべてを可視の`<input>`/
+       `<textarea>`へ正しく復元することを確認(チェックポイント22で報告された
+       「入力内容が消えたように見える」症状の解消を実機確認)。
+- **問題2(GA4)の実装:** `docs/specs/external-spec.md`「アクセス解析: GA4導入済み・
+  継続利用」・`architecture.md`決定事項T4に対応。内部仕様6文書・
+  `phase4-clarification.md`のいずれにも実測定IDの確定記録がなく、リポジトリ内を
+  検索した結果見つかった`G-EG1WMDPTV0`は、ルート直下の未追跡(`git status`で`??`)
+  レガシーファイル群(`index.html`・`dist-release/`・`src/`等、Vモデル移行前の
+  スクラッチ実装または参考サイト調査時の副産物と推測される。チェックポイント2の
+  「参考サイトの実アセット取得時、未来日付や`example.com`ドメイン等の不審な値を
+  確認した」という記録と一致する内容(`founder`の設立年2028年、
+  `info@froedux.example.com`等)が含まれており、当サイトの正式な測定IDとして
+  採用すべき出典ではないと判断した)由来であり、当サイトの正式な確定値ではないと
+  判断して採用しなかった。代わりに、`VERCEL_API_BASE_URL`・reCAPTCHAサイトキーと
+  同様のTODOプレースホルダーパターン(`G-XXXXXXXXXX`+実測定ID差し替えのみで
+  有効化される旨のコメント)を採用し、`site/`配下の全ページ
+  (`index.html`・`contact.html`・`news.html`・`privacy.html`・
+  `contact-thanks.html`・`qr/book1.html`・`qr/book2.html`・`news.cgi`が出力する
+  `templates/header.html`)の`<head>`先頭(`<meta charset>`直後、Google推奨配置)に
+  gtag.jsスニペットを追加した。実際に上記ローカルサーバーで5ページを開き、
+  `script[src*="googletagmanager.com/gtag/js"]`が各ページに1つずつ存在すること・
+  コンソールエラーが発生しないことを確認した(実際のネットワーク到達性・実測定IDでの
+  収集確認はこの環境では不可能、既知の制約と同種)。
+- **問題3(ロゴ画像アセット)の実装:** `external-spec.md`「ロゴ画像は1箇所の元データを
+  更新すると、サイト内の全ての表示箇所に反映される構成にすること」・
+  `architecture.md`決定事項T2「同一画像ファイルを複数ページから参照する形で十分」に
+  対応。実アセット(参考サイトの実データ)はこの環境では入手不能なため、
+  `site/images/logo-placeholder.svg`(新規、プレースホルダーであることをファイル内
+  コメントで明記)を単一ファイルとして新規作成し、GA4と同じ全8ページ+
+  `templates/header.html`の`<div class="logo"><h1><a>...</a></h1></div>`内の
+  テキストリンクを`<img src="(相対パス)/images/logo-placeholder.svg" alt="FroEduX"
+  class="logo-image">`を包んだ形に置き換えた(見出し要素`<h1>`自体は保持し、
+  画像の`alt`属性がアクセシブルネームを提供する構成)。`site/css/style.css`に
+  `.logo-image`(高さ2.2rem基準)、`site/css/responsive.css`のモバイル
+  ブレークポイントに`.logo-image { height: 1.6rem; }`を追記した。運用上、今後
+  実ロゴが確定した際は`logo-placeholder.svg`の中身を差し替えるだけで全ページに
+  反映される(HTML変更不要)。実機確認として、上記ローカルサーバーで5ページを開き
+  `.logo-image`が`isVisible()`であることを確認した。
+- **リポジトリ内で新たに発見した事項(本タスクのスコープ外、対応せず記録のみ):**
+  ルート直下に`index.html`・`README.md`・`dist-release/`・`src/`・`public/`・
+  `package.json`等の未追跡(`git status`で`??`)ファイル群が存在する。中身を確認した
+  ところ、Vite製の別デザイン(スライダー/ハンバーガーメニュー等を持つ「情報Ⅰ・
+  ITパスポート学習教材」訴求のランディングページ)で、実際のGA4測定ID
+  `G-EG1WMDPTV0`・OGP画像URL・JSON-LD構造化データ等を含んでいる。チェックポイント9の
+  「次のアクション」・チェックポイント21の「次のアクション」で既に「ルート直下に
+  出現した未追跡ファイル群の扱いも確認すること」と記録済みの既知の残課題と同一
+  であり、本タスクの指示範囲(`contact.html`のスクリプト競合修正+GA4/ロゴ追加)には
+  含まれないため、削除・統合等の判断はせず現状のまま保持した。**フェーズ9
+  (最終レビュー)着手前に、これらのファイルを削除してよいか運営者に確認することを
+  改めて推奨する**(誤って本番相当として参照・デプロイされるリスクがあるため)。
+- **`.gitattributes`に`*.svg text eol=lf`を追記**(新規追加した`logo-placeholder.svg`
+  向け、既存の他テキスト系拡張子と同じ規則)。
+- **テスト実行結果(実施済み、フェーズ8のE2Eテスト再実施そのものではない):**
+  - Perl単体テスト: `site/cgi-bin/lib/t/*.t`を`perl -Isite/cgi-bin/lib <file>.t`で
+    individually実行(この環境の`prove`は`TAP::Harness::Env`欠如のため使用不可、
+    テストファイル自体はTest::More標準のためprove無しでも同一に動作する)。
+    **72件中72件成功(0失敗)**、既存件数(67+`ContactCgiUtf8Boundary.t`5)から
+    変更なし、回帰なし。
+  - pytest: `api`配下で`python -m pytest tests -v`を実行。**31件中31件成功**、
+    既存件数から変更なし、回帰なし。
+  - Playwright: `SITE_BASE_URL=http://localhost:8080/`で`site/`をPython
+    `http.server --cgi`配信した状態で`npx playwright test tests/e2e/public`を
+    フルスイート実行(11件)した結果、**3 passed / 6 failed / 2 skipped**。
+    - 合格3件(`top-page`/`contact-page`/`privacy-page`)はチェックポイント22と
+      同一で回帰なし。
+    - 失敗6件はいずれも本タスクの変更と無関係な、既知のこの開発環境固有の制約
+      による失敗であることを個別に確認した: `basic-auth.spec.ts`3件
+      (Python `http.server`は`.htaccess` Basic認証を実装しないため401ではなく
+      200 or ソケット切断になる、実Apache環境待ちの既知制約)、
+      `news.spec.ts`1件・`contact-submission.spec.ts`の#4b 1件(いずれも
+      Windows上の`http.server --cgi`が`.cgi`実行時に`WinError 193`で失敗する
+      という、チェックポイント21・22で確認済みの既知制約によるsocket hang up)、
+      `faq-widget.spec.ts`1件(`VERCEL_API_BASE_URL`が実在しないプレースホルダー
+      ドメインのままのため`GET /api/faq`への実際のレスポンスが得られずタイムアウト、
+      実Vercelデプロイ未実施という既知制約)。
+    - スキップ2件(`contact-submission.spec.ts`の#4happy-path・
+      `vercel-faq-api.spec.ts`)は`VERCEL_API_BASE_URL`/`SMOKE_TEST_SECRET`
+      未設定によるテスト自身の`test.skip`ガードで、既存の挙動通り。
+    - 上記フルスイート実行に加えて、既存のPlaywright specファイルではカバーされて
+      いない「問題1」固有の回帰確認(`onRecaptchaSuccess`の呼び出し可否・
+      バリデーションエラー時の可視入力欄への値復元)を、本チェックポイント冒頭に
+      記載した専用の一時スクリプトで別途実機確認した(既存specにこの観点の
+      テストが存在しないため、E2Eレポートの指摘通りテスト追加だけでは不十分と
+      判断し、実ブラウザでの直接確認を実施)。
+  - 検証に使用した一時ファイル(`verify_*.js`、ポート8080/8099の一時HTTPサーバー
+    プロセス)はすべて確認後に削除・終了し、`git status`で追跡対象への副作用が
+    ないことを確認した。
+- **本チェックポイントはフェーズ8(E2Eテスト)の再実施そのものではない。**
+  実施したのは(1)フェーズ6スコープの実装修正、(2)実装者自身による実ブラウザでの
+  最小限の動作確認、(3)既存の自動テストスイート(Perl/pytest/Playwright)の回帰
+  確認、の3点であり、`docs/specs/e2e-test-report.md`のシナリオ10・11を含む
+  受け入れシナリオ全体の判定はp8-e2e-testerによる独立した再検証が別途必要である。
+
+**次のアクション:** フェーズ8(p8-e2e-tester、E2Eテスト)を再実施し、
+`docs/specs/e2e-test-report.md`のシナリオ10・11(reCAPTCHA連携・エラー時再描画)を
+中心に合格判定を得ること。GA4・ロゴのプレースホルダー実装(問題2・3)についても、
+実測定ID・実ロゴアセットの入手可否を運営者に確認する必要がある旨、フェーズ9
+(最終レビュー)着手前に改めて確認すること。**フェーズ8が独立に合格するまで、
+フェーズ9にはまだ進めない。**

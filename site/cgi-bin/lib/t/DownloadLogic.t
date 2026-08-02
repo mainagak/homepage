@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 
-# DownloadLogic.pm の単体テスト(19ケース)。
-# 内訳(internal-spec-testing.md 3.1節): resolve_mime_type 8、
-# validate_file_param 5、authorize_book_access 3、rotate_log_if_needed 2、
+# DownloadLogic.pm の単体テスト(21ケース)。
+# 内訳: resolve_mime_type 8、validate_file_param 6(book3対応追加分含む)、
+# authorize_book_access 4(book3対応追加分含む)、rotate_log_if_needed 2、
 # format_access_log_line 1。
 
 use v5.16;
@@ -10,7 +10,7 @@ use strict;
 use warnings;
 use utf8;
 
-use Test::More tests => 19;
+use Test::More tests => 21;
 use File::Temp qw(tempdir);
 use File::Spec;
 use POSIX qw(mktime);
@@ -62,7 +62,10 @@ ok(!DownloadLogic::validate_file_param('book1/資料.pdf'),
 ok(!DownloadLogic::validate_file_param('book1/sample.exe'),
     'validate_file_param: 許可拡張子以外は不合格');
 
-# ==== authorize_book_access (3件) ====
+ok(DownloadLogic::validate_file_param('book3/bonus.pdf'),
+    'validate_file_param: 正常系(book3/bonus.pdf)は合格');
+
+# ==== authorize_book_access (4件) ====
 
 ok(DownloadLogic::authorize_book_access('book1user', 'book1'),
     'authorize_book_access: book1ユーザーがbook1ファイルにアクセス→許可');
@@ -72,6 +75,9 @@ ok(!DownloadLogic::authorize_book_access('book1user', 'book2'),
 
 ok(!DownloadLogic::authorize_book_access('unknown_user', 'book1'),
     'authorize_book_access: 未知のユーザー名→拒否');
+
+ok(DownloadLogic::authorize_book_access('book3user', 'book3'),
+    'authorize_book_access: book3ユーザーがbook3ファイルにアクセス→許可');
 
 # ==== rotate_log_if_needed (2件) ====
 

@@ -40,6 +40,7 @@ my %MIME_TABLE = (
 my %BOOK_USERS = (
     book1 => ['book1user'],
     book2 => ['book2user'],
+    book3 => ['book3user'],
 );
 
 # resolve_mime_type($filename)
@@ -67,13 +68,13 @@ sub resolve_mime_type {
 sub validate_file_param {
     my ($file) = @_;
     return 0 unless defined $file;
-    return $file =~ m{\A(?:book[12])/[A-Za-z0-9_\-]+\.(?:pdf|docx?|xlsx?|pptx?)\z} ? 1 : 0;
+    return $file =~ m{\A(?:book[123])/[A-Za-z0-9_\-]+\.(?:pdf|docx?|xlsx?|pptx?)\z} ? 1 : 0;
 }
 
 # authorize_book_access($remote_user, $book)
 #
 # Apache Basic認証を通過した$remote_user($ENV{REMOTE_USER})が、$book
-# ("book1"または"book2")のファイルへアクセスする権限を持つかを判定する
+# ("book1"・"book2"・"book3")のファイルへアクセスする権限を持つかを判定する
 # (internal-spec-cyberhome.md 3.1節、Perl側での書籍別認可)。
 sub authorize_book_access {
     my ($remote_user, $book) = @_;

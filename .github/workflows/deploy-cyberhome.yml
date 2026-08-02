@@ -67,6 +67,9 @@ jobs:
 
   smoke-test:
     needs: deploy
+    permissions:
+      contents: read
+      issues: write
     uses: ./.github/workflows/playwright-smoke.yml
     with:
       triggered_by: "deploy-cyberhome"

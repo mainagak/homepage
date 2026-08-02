@@ -40,6 +40,15 @@ a {
 .logo h1 {
     font-size: 1.8rem;
     font-weight: bold;
+    line-height: 0;
+}
+
+/* サイト全体で単一の画像ファイル(images/logo-placeholder.svg)を参照する
+   (external-spec.mdのロゴ一元管理要件、architecture.md決定事項T2)。 */
+.logo-image {
+    display: block;
+    height: 2.2rem;
+    width: auto;
 }
 
 .nav-menu {

@@ -18,6 +18,7 @@
 *.css  text eol=lf
 *.js   text eol=lf
 *.txt  text eol=lf
+*.svg  text eol=lf
 
 # バイナリファイルは改行変換対象外であることを明示(ダウンロード特典ファイル等)
 *.pdf  binary

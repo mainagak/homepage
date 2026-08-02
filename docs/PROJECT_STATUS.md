@@ -1763,3 +1763,32 @@ grepで確認すること)。
 **実機で最終確認:** book1user/book2user/book3user それぞれが自分の書籍のみ
 ダウンロード可能(200)、他の書籍へのアクセスは403で正しく拒否されることを
 確認済み。`book3user`の認証情報は`dvPassWord-202804`(他2冊と同じ命名規則)。
+
+**副次的に発見した運用上の注意点:** `qr/`と`dl/`(および`cgi-bin/download.cgi`)は
+同一のBasic認証realmを共有する設計のため、購入者が汎用の`qruser`でQRページに
+アクセスした状態のままダウンウンロードリンクをクリックすると、ブラウザが
+`qruser`の認証情報を自動的に使い回し、`authorize_book_access()`が拒否して
+403(「このファイルへのアクセス権限がありません」)になる。運用上は、
+各書籍の購入者にはQRページ・ダウンロードの両方でその書籍専用アカウント
+(`book1user`等)を使うよう案内し、`qruser`は使わせないこと。また
+`qr/book1.html`・`book2.html`のダウンロードリンクが、コンテンツリネーム前の
+古いファイル名(`sample.pdf`/`sample.xlsx`)を参照したまま残っていたため
+`bonus.pdf`に修正した(コミット`c7ef858`)。
+
+## 2026-08-02: チェックポイント32 — reCAPTCHAキーの再作成(v3→v2)、最終確認完了
+
+運営者が最初に登録したキーは reCAPTCHA **v3** として作成されていたことが判明
+(`エラー：キータイプが無効です` = Google公式の "Invalid key type" エラー)。
+localhostで最小テストページを作成しキー種別を独立検証したところ、ドメインに
+関係なく同一エラーが再現し、ドメイン設定ではなくキー種別の問題であることを
+確定させた。運営者に**クラシック版reCAPTCHA管理コンソール**
+(`google.com/recaptcha/admin/create`)からv2チェックボックスとして
+再作成する手順を詳細に案内し、新しいキーペアを受領。再度localhostで
+検証(緑のチェックマーク表示を確認)してから本番反映した:
+- サイトキーを`site/contact.html`に反映(コミット`61d4c08`)
+- VercelのシークレットキーEnvを`vercel env rm`→`add`で更新、`vercel --prod`再デプロイ
+- `deploy-cyberhome.yml`自動起動、backup→deploy→smoke-test(11/11件)まで成功
+- 本番`contact.html`の`data-sitekey`が新キーになっていることをcurlで確認済み
+
+**これでreCAPTCHA・GA4・特典ダウンロード(3冊)・Basic認証を含め、運営者から
+報告された不具合はすべて解消・本番反映済み。**

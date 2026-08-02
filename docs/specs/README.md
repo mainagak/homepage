@@ -6,6 +6,20 @@
 内部仕様最終レビュー)が完了。`docs/specs/internal-spec.md`は2026-08-02に**承認**され、
 フェーズ6(実装・単体テスト)へ着手可能な状態になった。**
 
+**2026-08-02フェーズ6 静的ページ実装(gap-fill)完了:** Task#1(リポジトリ構成)・
+Task#3(Cyberhome側CGI)のいずれも「ページ内容・コピー自体はスコープ外」と判断して
+未着手だった`site/contact.html`・`contact-thanks.html`・`privacy.html`・`news.html`
+(新規)と`site/index.html`(旧・英語プレースホルダーからexternal-spec.md確定事項に
+基づく日本語コンテンツへ全面更新)を実装した。`contact.html`は`contact.cgi`が要求する
+フィールド名・プレースホルダー構文を実コード(`ContactLogic.pm`・`Common.pm`)を
+grepして完全一致させ、`Common::render_template()`を実際に実行して置換結果を検証した。
+FAQウィジェット(`site/js/chat-widget.js`)・reCAPTCHA→HMAC連携(`site/js/contact-form.js`)
+を新規実装し、`internal-spec-integration.md`・`internal-spec-vercel.md`の契約文言
+(空状態・エラー時メッセージ等)をそのまま使用。既存Perl単体テスト67件は全件成功のまま
+(CGI/`.pm`側は無変更)。VercelデプロイURL・reCAPTCHAサイトキーの2値は実機未確定のため
+コード中に明示的なTODOプレースホルダーとして残している。詳細は`docs/PROJECT_STATUS.md`
+チェックポイント17を参照。
+
 **2026-08-02フェーズ6 Task#4(Vercel/FastAPI実装、Wave2)完了:**
 `internal-spec-vercel.md`に基づき`/api`配下にFastAPIアプリ本体
 (`app/main.py`・`core/`・`middleware/`・`routers/`・`models/`・`services/`)を新規実装。
@@ -183,22 +197,34 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
     `NewsLogic.t`7)全件成功。`site/contact.html`等の静的ページは範囲外として
     次タスクへ申し送り。詳細は`docs/PROJECT_STATUS.md`チェックポイント16参照。
 
+15. **フェーズ6 静的ページ実装(gap-fill)完了(2026-08-02):** `site/contact.html`・
+    `contact-thanks.html`・`privacy.html`・`news.html`(新規)、`site/index.html`
+    (日本語コンテンツへ全面更新)、`site/js/chat-widget.js`・`contact-form.js`
+    (新規)を実装。`contact.html`のフィールド名・プレースホルダー構文は
+    `contact.cgi`・`ContactLogic.pm`の実コードと完全一致させ、
+    `Common::render_template()`を実際に実行して検証。既存Perl単体テスト67件は
+    全件成功のまま。詳細は`docs/PROJECT_STATUS.md`チェックポイント17参照。
+
 **残タスク:**
-15. フェーズ6の残りタスク(テスト・CI/CD詳細実装)に着手する
-    (連携契約実装・Cyberhome側CGI実装・Vercel側FastAPI実装はTask#2〜4で完了済み)。
-16. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
-17. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
+16. フェーズ6の残りタスク(テスト・CI/CD詳細実装)に着手する
+    (連携契約実装・Cyberhome側CGI実装・Vercel側FastAPI実装・静的ページ実装は
+    Task#2〜4+gap-fillで完了済み)。
+17. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
+18. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
     現行方針と不整合)の扱いを整理する(非ブロッキング、詳細は
     `docs/PROJECT_STATUS.md`チェックポイント13の「フェーズ4/5へのフィードバック」参照)。
-18. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
+19. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
     ダブルサブミット方式を`admin.py`ルーターとともに実装する(Task#4では
     スコープ外と判断し見送った、詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照)。
-19. `site/contact.html`・`contact-thanks.html`・`privacy.html`(+記事一覧入口の
-    `news.html`)を実装する静的ページタスク着手時、`contact.cgi`が要求する
-    プレースホルダーコメント(`<!--CONTACT_ERRORS--><!--/CONTACT_ERRORS-->`、
-    `<!--VALUE:last_name-->`等)を`contact.html`に含めること(Task#3では
-    `contact.cgi`側の実装のみ完了、`contact.html`自体は未作成。詳細は
-    `docs/PROJECT_STATUS.md`チェックポイント16参照)。
+20. `site/js/chat-widget.js`・`contact-form.js`内の`VERCEL_API_BASE_URL`、
+    `site/contact.html`のreCAPTCHA `data-sitekey`は、実機情報(Vercelデプロイ先URL・
+    reCAPTCHA v2サイトキーの登録)が確定次第、プレースホルダーから実際の値に
+    置き換えること(非ブロッキング、詳細は`docs/PROJECT_STATUS.md`チェックポイント17
+    参照)。
+21. `site/qr/book1.html`・`book2.html`にはFAQウィジェット(`chat-widget.js`)を
+    意図的に追加していない(Task#3の既存成果物へのスコープ拡大を避けたため)。
+    external-spec.mdの「全ページ共通」要件を厳密に満たすには、将来これらにも
+    追加する余地がある(非ブロッキング)。
 
 ---
 
@@ -216,7 +242,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
 | 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
-| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、Task#2: データモデル 完了、Task#3: Cyberhome側Perl CGI実装 完了、Task#4: Vercel/FastAPI実装 完了、2026-08-02) |
+| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、Task#2: データモデル 完了、Task#3: Cyberhome側Perl CGI実装 完了、Task#4: Vercel/FastAPI実装 完了、静的ページ実装(gap-fill) 完了、2026-08-02。残: テスト・CI/CD詳細実装) |
 | 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 未着手 |
 | 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 未着手 |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |

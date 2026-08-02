@@ -681,3 +681,115 @@ Vercel側FastAPI実装、テスト・CI/CD詳細実装)に着手する。Vercel�
 `contact.cgi`が要求するプレースホルダーコメントを含めること。本タスクは単体テスト
 (Perl Test::More 67ケース)までであり、システムテスト・E2Eテスト(フェーズ7・8)は
 まだ実施していない。
+
+## 2026-08-02: チェックポイント17 — フェーズ6 静的ページ実装(gap-fill、Task#3の申し送り解消)完了
+
+- Wave1(リポジトリ構成)・Wave2(Cyberhome側CGI)のいずれのタスクも「実際のページ
+  内容・コピーはスコープ外」と判断して着手しなかった、`docs/specs/internal-spec-repo-cicd.md`
+  §1.1のディレクトリツリーが要求する`site/contact.html`・`contact-thanks.html`・
+  `privacy.html`・`news.html`(未作成)と`site/index.html`(旧・英語プレースホルダー
+  のまま放置)を、事後発覚したギャップとして実装した。
+- **新規作成:** `site/contact.html`・`site/contact-thanks.html`・`site/privacy.html`・
+  `site/news.html`。**更新:** `site/index.html`(旧Node.js時代の英語プレースホルダー
+  content — `/api/send-email`宛のfetch・`chat.html`への未実装iframe参照を含む — を、
+  `external-spec.md`の確定事項(会社名FroEduX/代表者とどほっけ太郎/所在地川崎市
+  中原区宮内/電話なし/メールは作成中/営業時間平日10-17時/設立2030年)に基づく
+  日本語コンテンツへ全面的に書き換え)。
+- **`contact.html`の構造は`internal-spec-cyberhome.md` 2.1節・2.8節の契約に厳密に
+  従った:** `<form method="POST" action="cgi-bin/contact.cgi">`、項目順序(姓・名・
+  メール・メール確認用・問い合わせ内容・プライバシー同意・reCAPTCHA・
+  `verify_token`(hidden)・送信ボタン)、フィールド名は`site/cgi-bin/contact.cgi`・
+  `ContactLogic.pm`を実際にgrepして`last_name`/`first_name`/`email`/
+  `email_confirm`/`message`/`privacy_agree`/`verify_token`と完全一致させた
+  (spec文書だけでなく実装済みコードを一次情報として確認)。
+- **プレースホルダー設計上の重要な決定(spec未規定、本タスクで確定・要記録):**
+  `Common::render_template()`は文字列位置ベースの単純置換であり、HTML構文を
+  意識しない。そのため`<!--VALUE:last_name-->`等をそのまま`<input value="...">`の
+  中に書くと、`contact.html`がGETで**未処理のまま**Apacheから直接配信される
+  初回アクセス時(`internal-spec-cyberhome.md` 2.1節)に、未置換のプレースホルダー
+  文字列がそのまま入力欄の初期値として表示されてしまう(実際にPerlで
+  `Common::render_template()`を試験実行し、この位置に置いた場合に再現することを
+  確認した上で設計を変更した)。回避策として、各`<input>`は常に`value=""`のまま
+  空にしておき、プレースホルダーは`<span class="value-holder" data-target="..."
+  hidden><!--VALUE:xxx--></span>`という非表示のsibling要素に置き、
+  `contact-form.js`がページ読み込み時にその内容(処理済みなら入力値、未処理なら
+  空文字列)を対応する入力欄へ移し替える方式にした。`site/cgi-bin/lib/Common.pm`・
+  `contact.cgi`は一切変更していない(既存の確定済み実装のまま)。この設計変更は
+  `perl -Ilib -e '...'`でCommon::render_templateを実際に実行し、(a)エラー時に
+  `<ul class="error-list">`が正しく挿入されCONTACT_ERRORSマーカーが残らないこと、
+  (b)各`value-holder`に期待通りの値がHTMLエスケープ済みで入ること、
+  (c)エラーなしの場合にプレースホルダー文字列がどこにも残らないこと、を確認した
+  (67件のPerl Test::More既存テストも全件成功のまま)。
+- **FAQ/チャットウィジェット(`site/js/chat-widget.js`、新規):**
+  `internal-spec-vercel.md` 2.2節・`internal-spec-integration.md` 3章/6.2節の契約
+  (`GET /api/faq`、5秒タイムアウト、`Cache-Control: no-store`、0件時の空状態文言
+  「まだFAQがありません。お問い合わせフォームをご利用ください」、失敗時文言
+  「FAQを読み込めませんでした。しばらくしてから再度お試しいただくか、お問い合わせ
+  フォームをご利用ください」)をそのまま実装。`external-spec.md`「2. 問い合わせ
+  チャット機能」の確定要件(全ページ共通のフローティングウィジェット)に従い、
+  DOMをJSで動的に挿入する設計にして、`index.html`・`contact.html`・
+  `contact-thanks.html`・`privacy.html`・`news.html`に加えて`news.cgi`が使う
+  `site/templates/footer.html`にも読み込みタグを追加し、`news.cgi`が生成する
+  記事一覧・詳細ページも含めて実質的に全ページに表示されるようにした
+  (Perlコード自体は無変更、`footer.html`は`_read_fragment()`で無条件に文字列
+  結合されるだけの断片のため、この追加はNewsLogic.pmのテストに影響しないことを
+  67件のPerlテスト再実行で確認済み)。あわせて`footer.html`内の旧
+  `mailto:mainagak@gmail.com`表示を、外部仕様が「メールアドレスは作成中」と
+  明記していることと矛盾しないよう、プライバシーポリシーへのリンクに置き換えた。
+- **reCAPTCHA→HMAC→CGIのブラウザ側リレー(`site/js/contact-form.js`、新規):**
+  `internal-spec-integration.md` 1.4節・2.2節・6.1節の契約通り、reCAPTCHA v2の
+  `data-callback`から`POST /api/verify-recaptcha`を8秒タイムアウトで呼び出し、
+  成功時に`verify_token`(hidden)へトークンを設定して送信ボタンのdisabledを
+  解除する。失敗時の文言(「検証に失敗しました。もう一度チェックボックスを操作
+  するか、時間をおいて再度お試しください。」)も契約の確定文言をそのまま使用。
+  `internal-spec-vercel.md` 9.1節の指示通り、`X-Smoke-Test-Auth`ヘッダーは一切
+  送信しない(CI専用のPlaywrightスモークテストのみが付与する設計と整合)。
+- **未確定の実値2件をコード中に明示的なTODOコメント付きプレースホルダーとして
+  埋め込んだ(既存の`architecture.md`「追加質問4・6」と同種の、実機確認待ちの
+  非公開情報という扱い):**
+  1. `VERCEL_API_BASE_URL`(`chat-widget.js`・`contact-form.js`の両方、
+     Vercel実プロジェクトのデプロイURLが未確定のため)。
+  2. `contact.html`のreCAPTCHA `data-sitekey`(v2サイトキー、
+     `jyoho1.web.cyberhome.ne.jp`ドメインでの登録がまだ完了していないため)。
+  いずれも実機確認・登録が完了し次第、該当箇所を実際の値に置き換える必要がある
+  (非ブロッキング、フェーズ7以降で解消)。
+- **`site/qr/book1.html`・`book2.html`は意図的に変更していない:**
+  Basic認証済みの限定的なダウンロード案内ページ(`noindex, nofollow`)であり、
+  Task#3(Cyberhome側CGI実装)の既存成果物に手を入れるスコープ拡大を避けるため、
+  FAQウィジェットの追加は見送った(非ブロッキング、フェーズ4/5への軽微な
+  フィードバックとして記録: 厳密に「全ページ共通」を満たすには将来これらにも
+  ウィジェットを追加する余地がある)。
+- **CSS(`site/css/style.css`・`responsive.css`)は既存の配色・角丸・シャドウの
+  デザイン言語を踏襲して拡張した**(新規デザインシステムは導入していない)。
+  旧`.chatbot-hidden`・`#chatbot-iframe`(未実装の`chat.html`用iframe)は
+  ウィジェット方式への置き換えに伴い削除した。
+- **`site/js/main.js`を整理:** 旧Node.js時代の`/api/send-email`宛fetch処理・
+  iframeチャットボットのトグル処理(いずれも到達不能なデッドコード化していた)を
+  削除し、ページ内アンカーリンクのスムーズスクロール初期化のみに整理した
+  (`.nav-link`のクリックを、ハッシュリンクの場合のみpreventDefaultするよう修正。
+  これにより`contact.html`・`news.html`等の別ページへのnav-linkが正しく機能する)。
+  `site/js/utils.js`は汎用ユーティリティのため変更していない。
+- **検証内容(実施済み、Phase 7/8のシステムテスト・E2Eテストではない):**
+  - `node --check`で新規・変更した4つのJSファイル(`main.js`・`chat-widget.js`・
+    `contact-form.js`。`utils.js`は無変更だが念のため実施)の構文エラーがないこと
+    を確認。
+  - Pythonの`html.parser`でタグの開閉バランスを検証(5つの新規/更新HTMLページは
+    単独で整合、`templates/header.html`+`footer.html`は連結時に整合することを
+    確認)。
+  - `site/cgi-bin/lib/`の既存Perl単体テスト67件(`Common.t`14/`ContactLogic.t`27/
+    `DownloadLogic.t`19/`NewsLogic.t`7)を再実行し、全件成功のまま変化がないことを
+    確認(本タスクはCGI/`.pm`側を一切変更していないため期待通り)。
+  - `Common::render_template()`を実際の`site/contact.html`に対して直接実行し、
+    エラーあり/なし双方のケースでプレースホルダーの挙動を手動検証(上記参照)。
+  - 実際のブラウザでの表示確認、実際のVercel API・実際のreCAPTCHAキーでの
+    疎通確認、Apache実機でのCGI起動確認は一切行っていない
+    (**本チェックポイントはシステムテスト・E2Eテスト(フェーズ7・8)を構成しない**)。
+- `docs/specs/README.md`のダッシュボード・進捗ボード・残タスク(項目19)を本内容に
+  合わせて更新する(別コミット)。
+
+**次のアクション:** フェーズ6の残りタスク(テスト・CI/CD詳細実装)に着手する。
+本タスクで埋め込んだ2件のプレースホルダー実値(Vercelデプロイ先URL、reCAPTCHA
+サイトキー)は、実機情報が確定次第、`site/js/chat-widget.js`・
+`site/js/contact-form.js`・`site/contact.html`を修正すること。フェーズ7・8で
+実機に近い環境での動作確認(reCAPTCHA→HMAC→contact.cgiのフルフロー、FAQ
+ウィジェットの実データ表示、QRページへのウィジェット追加要否の再検討)を行うこと。

@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  INTERIM LOGO — a Claude-Code-drafted mark for FroEduX, pending the operator's
-  final real brand asset (docs/PROJECT_STATUS.md checkpoint 26). Not final
-  branding; replace freely once the operator has a real logo.
+  Claude-Code-designed mark for FroEduX (v2, more finished pass than the
+  original interim graduation-cap draft). Still pending the operator's own
+  final brand decision, but intended as a real, presentable design rather
+  than a placeholder.
+
+  Concept: two page-leaves crossing to form an "X" (literal nod to the
+  brand name and to FroEduX's actual product, Kindle e-books), rendered as
+  a duotone mark rather than the more generic mortarboard/graduation-cap
+  motif used in the prior draft. A single warm accent (the small dot,
+  echoed in the wordmark's "X") is the one deliberate departure from the
+  site's all-blue palette — a bookmark-tab reference, used sparingly.
 
   This remains the single source-of-truth logo image file referenced from
   every page's <header> (external-spec.md「ロゴ画像は1箇所の元データを更新すると、
@@ -11,21 +19,28 @@
   Replacing this file's contents is enough; no HTML changes are needed
   anywhere in site/.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 36" role="img" aria-labelledby="froeduxLogoTitle">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 178 36" role="img" aria-labelledby="froeduxLogoTitle">
     <title id="froeduxLogoTitle">FroEduX</title>
     <defs>
-        <linearGradient id="froeduxBadgeGradient" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#3498db"/>
-            <stop offset="100%" stop-color="#2c7fb8"/>
+        <linearGradient id="froeduxPageA" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#5dade2"/>
+            <stop offset="100%" stop-color="#3498db"/>
+        </linearGradient>
+        <linearGradient id="froeduxPageB" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0%" stop-color="#1b4f72"/>
+            <stop offset="100%" stop-color="#21618c"/>
         </linearGradient>
     </defs>
-    <rect x="0" y="2" width="32" height="32" rx="8" fill="url(#froeduxBadgeGradient)"/>
-    <!-- 学びを象徴する角帽(graduation cap)モチーフ -->
-    <g transform="translate(16,17)">
-        <polygon points="0,-7 11,-2 0,3 -11,-2" fill="#ffffff"/>
-        <rect x="-4.5" y="-1" width="9" height="6.5" rx="1" fill="#ffffff" opacity="0.92"/>
-        <line x1="8" y1="-1.2" x2="8" y2="5.5" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round"/>
-        <circle cx="8" cy="6.5" r="1.5" fill="#ffffff"/>
+
+    <!-- icon: two leaves crossing into an X, ~32x32 -->
+    <g transform="translate(17,18)">
+        <path d="M -13,10 C -13,3 -8,-8 1,-13 C 5,-6 4,4 -2,10 C -6,13 -10,13 -13,10 Z"
+              fill="url(#froeduxPageA)"/>
+        <path d="M 13,10 C 13,3 8,-8 -1,-13 C -5,-6 -4,4 2,10 C 6,13 10,13 13,10 Z"
+              fill="url(#froeduxPageB)" opacity="0.94"/>
+        <circle cx="0" cy="11.5" r="2.1" fill="#e9a13a"/>
     </g>
-    <text x="42" y="25" font-family="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" font-size="20" font-weight="bold" fill="#ffffff">FroEduX</text>
+
+    <text x="42" y="24" font-family="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+          font-size="19" font-weight="700" letter-spacing="0.2" fill="#ffffff">Fro<tspan fill="#ffffff">Edu</tspan><tspan fill="#e9a13a">X</tspan></text>
 </svg>

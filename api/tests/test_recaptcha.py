@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import logging
 import re
+from urllib.parse import parse_qs
 
 import httpx
 import respx
@@ -184,3 +185,56 @@ def test_fail_open_log_does_not_leak_raw_recaptcha_response(client, caplog):
         )
     assert resp.status_code == 200
     assert raw_value not in caplog.text
+
+
+# 15 (internal-spec-vercel.md 9章、2026-08-02追加。6.4節のテスト表自体は9章追加時に
+# 更新されていなかったため本テストで補完する): 正しいX-Smoke-Test-Authヘッダー付き
+# リクエストは、本番RECAPTCHA_SECRET_KEYではなくRECAPTCHA_TEST_SECRET_KEY
+# (Google公式テストシークレットキー)をGoogleへ送信する(日次Playwrightスモーク
+# テストの正常系送信を支える`_resolve_secret_key`の分岐そのものを検証する)。
+def test_smoke_test_auth_header_switches_to_test_secret_key(client, override_settings):
+    override_settings(
+        RECAPTCHA_SECRET_KEY="prod-secret", RECAPTCHA_TEST_SECRET_KEY="google-test-secret"
+    )
+    sent_secret = {}
+
+    def _capture(request):
+        sent_secret["value"] = parse_qs(request.content.decode())["secret"][0]
+        return httpx.Response(200, json={"success": True})
+
+    with respx.mock:
+        respx.post(GOOGLE_URL).mock(side_effect=_capture)
+        resp = client.post(
+            "/api/verify-recaptcha",
+            json={"recaptcha_response": "smoke-test-bypass"},
+            headers={"X-Smoke-Test-Auth": "test-smoke-secret"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["verified"] is True
+    assert sent_secret["value"] == "google-test-secret"
+
+
+# 16: X-Smoke-Test-Authヘッダーが欠落/不一致の場合は、通常のユーザー送信と同様に
+# 本番RECAPTCHA_SECRET_KEYがGoogleへ送信される(誤って本番トラフィックがテスト
+# シークレットキー扱いにならないことの確認)。
+def test_missing_or_invalid_smoke_test_auth_header_uses_production_secret_key(
+    client, override_settings
+):
+    override_settings(
+        RECAPTCHA_SECRET_KEY="prod-secret", RECAPTCHA_TEST_SECRET_KEY="google-test-secret"
+    )
+    sent_secret = {}
+
+    def _capture(request):
+        sent_secret["value"] = parse_qs(request.content.decode())["secret"][0]
+        return httpx.Response(200, json={"success": True})
+
+    with respx.mock:
+        respx.post(GOOGLE_URL).mock(side_effect=_capture)
+        resp = client.post(
+            "/api/verify-recaptcha",
+            json={"recaptcha_response": "dummy-response"},
+            headers={"X-Smoke-Test-Auth": "wrong-secret"},
+        )
+    assert resp.status_code == 200
+    assert sent_secret["value"] == "prod-secret"

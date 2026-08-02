@@ -1,0 +1,11 @@
+{
+  "name": "homepage-e2e-smoke",
+  "private": true,
+  "description": "Playwright public-site smoke-test suite for the FroEduX homepage (Cyberhome static site + Vercel/FastAPI API). Design source: docs/specs/internal-spec-testing.md 2章. This is the only Node.js asset in the repo; there is intentionally no local dev server here (architecture.md 決定事項9).",
+  "scripts": {
+    "test:smoke": "playwright test tests/e2e/public"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}

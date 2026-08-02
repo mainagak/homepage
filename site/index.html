@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Homepage - Contact us and chat with our AI assistant">
-    <title>Homepage | Welcome</title>
+    <meta name="description" content="FroEduX(フロエデュクス) - 電子書籍(Kindle)の紹介と購入者向けサポートサイト">
+    <title>FroEduX | 電子書籍のご紹介</title>
+    <link rel="stylesheet" href="css/reset.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
 </head>
@@ -12,13 +13,14 @@
     <header class="header">
         <nav class="navbar">
             <div class="logo">
-                <h1>Homepage</h1>
+                <h1><a href="#home">FroEduX</a></h1>
             </div>
             <ul class="nav-menu">
-                <li><a href="#home" class="nav-link">Home</a></li>
-                <li><a href="#about" class="nav-link">About</a></li>
-                <li><a href="#services" class="nav-link">Services</a></li>
-                <li><a href="#contact" class="nav-link">Contact</a></li>
+                <li><a href="#home" class="nav-link">ホーム</a></li>
+                <li><a href="#about" class="nav-link">会社概要</a></li>
+                <li><a href="#services" class="nav-link">サービス</a></li>
+                <li><a href="news.html" class="nav-link">お知らせ</a></li>
+                <li><a href="contact.html" class="nav-link">お問い合わせ</a></li>
             </ul>
         </nav>
     </header>
@@ -27,69 +29,93 @@
         <!-- Hero Section -->
         <section id="home" class="hero">
             <div class="hero-content">
-                <h2>Welcome to Our Homepage</h2>
-                <p>Discover amazing services and connect with us easily</p>
-                <button class="cta-button" onclick="scrollToSection('#contact')">Get in Touch</button>
+                <h2>電子書籍でお仕事に役立つ知識を</h2>
+                <p>FroEduXは、Amazon Kindleストアで電子書籍を出版しています。ご購入者様向けの特典配布やご相談にも対応しています。</p>
+                <a class="cta-button" href="contact.html">お問い合わせはこちら</a>
             </div>
         </section>
 
         <!-- About Section -->
         <section id="about" class="about">
-            <h2>About Us</h2>
-            <p>We provide excellent services to help your business grow. Our team is dedicated to delivering quality and innovation.</p>
+            <h2>会社概要</h2>
+            <p>書籍販売事業(電子書籍/Kindle)の紹介、および購入者向けサポートを行っています。</p>
+            <dl class="company-info">
+                <div>
+                    <dt>会社名</dt>
+                    <dd>FroEduX</dd>
+                </div>
+                <div>
+                    <dt>代表者</dt>
+                    <dd>とどほっけ太郎</dd>
+                </div>
+                <div>
+                    <dt>所在地</dt>
+                    <dd>川崎市中原区宮内</dd>
+                </div>
+                <div>
+                    <dt>設立</dt>
+                    <dd>2030年</dd>
+                </div>
+                <div>
+                    <dt>営業時間</dt>
+                    <dd>平日 10:00〜17:00</dd>
+                </div>
+                <div>
+                    <dt>お問い合わせ</dt>
+                    <dd>メールアドレスは準備中です。お問い合わせは<a href="contact.html">お問い合わせフォーム</a>よりお願いいたします(お電話でのお問い合わせは受け付けておりません)。</dd>
+                </div>
+            </dl>
         </section>
 
         <!-- Services Section -->
         <section id="services" class="services">
-            <h2>Our Services</h2>
+            <h2>サービス</h2>
             <div class="service-grid">
                 <div class="service-card">
-                    <h3>Service 1</h3>
-                    <p>High-quality service with professional team</p>
+                    <h3>書籍について</h3>
+                    <p>Amazon Kindleストアで電子書籍を出版・販売しています。内容や購入方法に関するご質問はFAQまたはお問い合わせフォームからどうぞ。</p>
                 </div>
                 <div class="service-card">
-                    <h3>Service 2</h3>
-                    <p>Fast and reliable support 24/7</p>
+                    <h3>購入者特典</h3>
+                    <p>書籍をご購入いただいた方向けに、特典ファイル(PDF・Excel・Word・PowerPoint)をダウンロードいただけます。書籍内のQRコードからアクセスしてください。</p>
                 </div>
                 <div class="service-card">
-                    <h3>Service 3</h3>
-                    <p>Innovative solutions for modern problems</p>
+                    <h3>お仕事のご相談</h3>
+                    <p>お仕事に関するご相談も承っております。お気軽にお問い合わせフォームよりご連絡ください。</p>
                 </div>
             </div>
         </section>
 
         <!-- Contact Section -->
         <section id="contact" class="contact">
-            <h2>Contact Us</h2>
-            <p>Have questions? Fill out the form below and we'll get back to you.</p>
-            <div class="contact-container">
-                <form id="contact-form" class="contact-form">
-                    <input type="text" id="name" placeholder="Your Name" required>
-                    <input type="email" id="email" placeholder="Your Email" required>
-                    <textarea id="message" placeholder="Your Message" rows="5" required></textarea>
-                    <button type="submit" class="submit-button">Send Message</button>
-                </form>
-                <div id="form-status" class="form-status"></div>
-            </div>
+            <h2>お問い合わせ</h2>
+            <p>ご質問・ご相談は下記のお問い合わせフォームより承っております。</p>
+            <p><a class="cta-button" href="contact.html">お問い合わせフォームへ</a></p>
         </section>
 
-        <!-- Chatbot Section -->
+        <!-- FAQ / Chat Widget Section -->
         <section id="chatbot" class="chatbot-section">
-            <h2>Chat with Us</h2>
-            <p>Our AI assistant is here to help. Click below to start chatting.</p>
-            <button class="chat-toggle" onclick="toggleChatbot()">Open Chat</button>
-            <div id="chatbot-container" class="chatbot-hidden">
-                <iframe id="chatbot-iframe" src="chat.html" title="Chatbot"></iframe>
-            </div>
+            <h2>よくある質問(FAQ)</h2>
+            <p>画面右下の「FAQ」ボタンから、よくある質問をいつでもご確認いただけます。解決しない場合はお問い合わせフォームをご利用ください。</p>
+            <button type="button" class="chat-toggle" id="open-faq-widget">FAQを見る</button>
         </section>
     </main>
 
     <footer class="footer">
-        <p>&copy; 2026 Homepage. All rights reserved.</p>
-        <p>Contact: <a href="mailto:mainagak@gmail.com">mainagak@gmail.com</a></p>
+        <p>&copy; 2026 FroEduX. All rights reserved.</p>
+        <p><a href="privacy.html">プライバシーポリシー</a></p>
     </footer>
 
     <script src="js/utils.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/chat-widget.js"></script>
+    <script>
+        // 「FAQを見る」ボタンは chat-widget.js が挿入するトグルボタンのクリックを
+        // 代理で発火させる(ウィジェットの開閉ロジックを二重管理しないため)。
+        document.getElementById('open-faq-widget').addEventListener('click', () => {
+            const toggle = document.getElementById('faq-widget-toggle');
+            if (toggle) toggle.click();
+        });
+    </script>
 </body>
 </html>

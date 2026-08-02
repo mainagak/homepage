@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FroEduXへのお問い合わせフォーム">
+    <title>お問い合わせ | FroEduX</title>
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="logo">
+                <h1><a href="index.html">FroEduX</a></h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html#home" class="nav-link">ホーム</a></li>
+                <li><a href="index.html#about" class="nav-link">会社概要</a></li>
+                <li><a href="index.html#services" class="nav-link">サービス</a></li>
+                <li><a href="news.html" class="nav-link">お知らせ</a></li>
+                <li><a href="contact.html" class="nav-link">お問い合わせ</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="contact">
+            <h2>お問い合わせ</h2>
+            <p>
+                ご質問・ご相談は下記フォームよりお送りください。24時間以内(営業時間: 平日10:00〜17:00)にご返信いたします。
+            </p>
+
+            <!--CONTACT_ERRORS--><!--/CONTACT_ERRORS-->
+
+            <form method="POST" action="cgi-bin/contact.cgi" id="contact-form" class="contact-form">
+                <div class="form-group">
+                    <label for="last_name">姓 <span class="required">※必須</span></label>
+                    <input type="text" id="last_name" name="last_name" value="" required autocomplete="family-name">
+                    <span class="value-holder" data-target="last_name" hidden><!--VALUE:last_name--></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="first_name">名 <span class="required">※必須</span></label>
+                    <input type="text" id="first_name" name="first_name" value="" required autocomplete="given-name">
+                    <span class="value-holder" data-target="first_name" hidden><!--VALUE:first_name--></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">メールアドレス <span class="required">※必須</span></label>
+                    <input type="text" id="email" name="email" value="" required
+                           pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                           title="メールアドレスの形式で入力してください(例: sample@example.com)"
+                           autocomplete="email">
+                    <span class="value-holder" data-target="email" hidden><!--VALUE:email--></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="email_confirm">メールアドレス(確認用) <span class="required">※必須</span></label>
+                    <input type="text" id="email_confirm" name="email_confirm" value="" required
+                           pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                           title="メールアドレスの形式で入力してください(例: sample@example.com)"
+                           autocomplete="email">
+                    <span class="value-holder" data-target="email_confirm" hidden><!--VALUE:email_confirm--></span>
+                    <p class="field-error" id="email-mismatch-error" hidden>メールアドレスが一致しません</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">お問い合わせ内容 <span class="required">※必須</span></label>
+                    <textarea id="message" name="message" rows="6" required></textarea>
+                    <span class="value-holder" data-target="message" hidden><!--VALUE:message--></span>
+                </div>
+
+                <div class="form-group form-group-checkbox">
+                    <label>
+                        <input type="checkbox" id="privacy_agree" name="privacy_agree" value="1" required>
+                        <a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>に同意する <span class="required">※必須</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <!-- TODO: 実際のreCAPTCHA v2サイトキーに置き換えること
+                         (docs/specs/architecture.md「追加質問6」、ドメイン
+                         jyoho1.web.cyberhome.ne.jp で登録予定、未登録の非公開情報)。 -->
+                    <div class="g-recaptcha"
+                         data-sitekey="REPLACE_WITH_RECAPTCHA_SITE_KEY"
+                         data-callback="onRecaptchaSuccess"
+                         data-expired-callback="onRecaptchaExpired"></div>
+                    <p class="field-error" id="recaptcha-error" hidden></p>
+                </div>
+
+                <input type="hidden" id="verify_token" name="verify_token" value="">
+
+                <button type="submit" class="submit-button" id="contact-submit" disabled>送信する</button>
+            </form>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 FroEduX. All rights reserved.</p>
+        <p><a href="privacy.html">プライバシーポリシー</a></p>
+    </footer>
+
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script src="js/chat-widget.js"></script>
+    <script src="js/contact-form.js"></script>
+</body>
+</html>

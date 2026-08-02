@@ -1,92 +1,24 @@
-// main.js - Main application logic
+// main.js - ナビゲーションの初期化
+//
+// 問い合わせフォームの送信処理は contact.html 専用の contact-form.js、
+// FAQウィジェットは全ページ共通の chat-widget.js に分離した(それぞれ別のCGI/APIと
+// 連携するため)。このファイルはページ内アンカーリンクのスムーズスクロールのみを担う。
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeEventListeners();
+    initializeNavLinks();
 });
 
-function initializeEventListeners() {
-    const contactForm = document.getElementById('contact-form');
-    if (contactForm) {
-        contactForm.addEventListener('submit', handleFormSubmit);
-    }
-
-    document.querySelectorAll('.nav-link').forEach(link => {
+function initializeNavLinks() {
+    document.querySelectorAll('.nav-link').forEach((link) => {
+        const href = link.getAttribute('href');
+        // ページ内アンカー("#..."で始まるもの)のみスムーズスクロールで処理する。
+        // contact.html・cgi-bin/news.cgi等の別ページへのリンクは通常の遷移に任せる。
+        if (!href || !href.startsWith('#')) {
+            return;
+        }
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const target = link.getAttribute('href');
-            scrollToSection(target);
+            scrollToSection(href);
         });
     });
-}
-
-async function handleFormSubmit(e) {
-    e.preventDefault();
-
-    const name = document.getElementById('name').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const message = document.getElementById('message').value.trim();
-    const submitButton = document.querySelector('.submit-button');
-
-    if (!name || !email || !message) {
-        displayMessage('form-status', 'Please fill in all fields.', 'error');
-        return;
-    }
-
-    if (!isValidEmail(email)) {
-        displayMessage('form-status', 'Please enter a valid email address.', 'error');
-        return;
-    }
-
-    displayMessage('form-status', 'Sending your message...', 'loading');
-    submitButton.disabled = true;
-    submitButton.textContent = 'Sending...';
-
-    try {
-        const response = await apiRequest('/api/send-email', {
-            method: 'POST',
-            body: JSON.stringify({
-                name,
-                email,
-                message,
-                timestamp: new Date().toISOString()
-            })
-        });
-
-        if (response.success) {
-            displayMessage('form-status', '✓ Message sent successfully! We will get back to you soon.', 'success');
-            clearForm('contact-form');
-            submitButton.textContent = 'Send Message';
-        } else {
-            displayMessage('form-status', '✗ Failed to send message. Please try again.', 'error');
-            submitButton.disabled = false;
-            submitButton.textContent = 'Send Message';
-        }
-    } catch (error) {
-        console.error('Form submission error:', error);
-        displayMessage('form-status', '✗ An error occurred. Please try again later.', 'error');
-        submitButton.disabled = false;
-        submitButton.textContent = 'Send Message';
-    }
-}
-
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-}
-
-function toggleChatbot() {
-    const chatbotContainer = document.getElementById('chatbot-container');
-    if (chatbotContainer) {
-        chatbotContainer.classList.toggle('active');
-        const button = document.querySelector('.chat-toggle');
-        if (chatbotContainer.classList.contains('active')) {
-            button.textContent = 'Close Chat';
-        } else {
-            button.textContent = 'Open Chat';
-        }
-    }
-}
-
-function initializeChatbot() {
-    console.log('Chatbot initialization placeholder');
 }

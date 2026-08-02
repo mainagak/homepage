@@ -1026,3 +1026,80 @@ CORS Max-Ageの軽微な修正もあわせて対応することを推奨する�
 `docs/specs/system-test-report.md`の該当項目(特に日本語値を含む`contact.cgi`の
 正常系・エラー系)を再テストし、合格判定を得てからフェーズ8(E2Eテスト)へ進むこと。
 
+## 2026-08-02: チェックポイント20 — フェーズ6差し戻し対応、`contact.cgi`文字化けバグ・CORS Max-Age修正完了
+
+`docs/specs/system-test-report.md`(フェーズ7不合格判定)で指摘された2件を、
+フェーズ6の差し戻しタスクとして修正した。
+
+- **【重大】`site/cgi-bin/contact.cgi`の日本語入力文字化け(発見した問題1)を修正:**
+  `main()`内、`CGI->new`の直前に`$CGI::PARAM_UTF8 = 1;`を追加した。これにより
+  `$cgi->param()`が返す各値がCGI.pm内部で`Encode::decode('UTF-8', ...)`を通った
+  正しいPerl Unicode文字列になり、`_render_rejection()`経由のテンプレート再描画
+  (`Common::render_template()`)・`ContactLogic::build_notification_mail()`/
+  `build_autoreply_mail()`によるメール本文組み立て・`Common::write_log()`による
+  `contact_log.txt`記録のいずれにも正しくデコードされた文字列が流れるようになる
+  (1箇所の修正がCGI境界より下流の全経路に効く設計であることを確認済み)。
+  - 修正前に`ContactLogic.pm`・`Common.pm`側を調査したが、メールヘッダーの
+    `Content-Type: text/plain; charset=UTF-8`・`MIME-Version: 1.0`
+    (`ContactLogic::_build_mail_text()`)、`send_via_sendmail()`の
+    `binmode($mail_fh, ':encoding(UTF-8)')`、`write_log()`・`render_template()`の
+    `open(..., '<:encoding(UTF-8)' / '>>:encoding(UTF-8)', ...)`は、いずれも
+    「正しくデコードされたPerl文字列を受け取る」ことを前提に正しく実装済みだった
+    (=バグの原因はCGI境界(`contact.cgi`)のみに存在し、下流モジュールの修正は
+    不要と判断した)。
+  - `download.cgi`・`news.cgi`は`file`・`id`パラメータを英数字のみの正規表現で
+    バリデーションしており日本語自由入力を受け付けないため、システムテスト報告書も
+    影響なしと判定している。両CGIへの同種の防御的追加(報告書が「望ましい」と
+    記載した任意対応)は本タスクの必須修正範囲外と判断し、**今回は変更していない**
+    (指示された修正対象は`contact.cgi`のみのため。念のためフェーズ4/5への
+    フィードバックとして下記に記録する)。
+- **【軽微】CORS `Access-Control-Max-Age`不一致(発見した問題2)を修正:**
+  `api/app/main.py`の`CORSMiddleware`呼び出しに`max_age=86400`を追加した。値は
+  `docs/specs/internal-spec-integration.md` 5.2節・8章の確定値86400秒であることを
+  実際にドキュメントを読んで確認した(報告書の言い換えをそのまま信用せず裏取り済み)。
+  `api/tests/test_recaptcha.py`ケース13(`test_preflight_options_returns_cors_headers`)
+  に`Access-Control-Max-Age: 86400`のアサーションを追加した。
+- **回帰テストの追加(`contact.cgi`がCGI境界のUTF-8デコードを行っていることを
+  実際に検証するテスト):** 既存の`site/cgi-bin/lib/t/*.t`は`.pm`単体テストのみで
+  CGI境界を通らないため、新規ファイル
+  `site/cgi-bin/lib/t/ContactCgiUtf8Boundary.t`(Test::More、5ケース)を追加した。
+  実際のCGI.pmと同じパーセントデコードアルゴリズム(`%XX`→バイト単位`chr()`)+
+  `$CGI::PARAM_UTF8`対応を実装した最小限のスタブ
+  `site/cgi-bin/lib/t/fixtures/cgi_stub/CGI.pm`(非シップ、`site/.ftpdeployignore`の
+  `cgi-bin/lib/t/`除外設定によりCyberhome実機へは配置されない)をPERL5LIB経由で
+  読み込ませ、実際の`site/cgi-bin/contact.cgi`を子プロセスとして起動し、実際に
+  STDIN経由でUTF-8バイト列のPOSTボディ(`last_name=山田&first_name=太郎&...`)を
+  渡して、出力HTMLに日本語が文字化けせず正しいUTF-8バイト列のまま現れることを
+  確認する。`privacy_agree`を意図的に欠落させ`ContactLogic::validate_input()`の
+  時点でエラーにすることで、`verify_token`検証(`site/conf/hmac_secret.txt`が必要)
+  まで到達させずにCGI境界のデコード確認だけに検証範囲を絞っている。
+  - **修正前のコードに対して実際にこのテストを実行し、2ケースが実際に失敗する
+    (=バグを実際に検出する)ことを確認した上で、修正を適用して5ケース全件成功に
+    戻ることを確認した**(`git stash`で一時的に`contact.cgi`の修正のみを退避して
+    再現・復元)。
+- **単体テスト実行結果(実際に実行、両方とも):**
+  - Perl(Test::More): `Common.t`14 + `ContactLogic.t`27 + `DownloadLogic.t`19 +
+    `NewsLogic.t`7 + 新規`ContactCgiUtf8Boundary.t`5 = **合計72件、全件成功**
+    (環境の`prove`が`TAP::Harness::Env`欠如で起動できなかったため、各`.t`ファイルを
+    個別に`perl`実行し、TAP出力の`ok`/`not ok`件数を集計する形で確認した)。
+  - pytest: `test_faq.py`12 + `test_recaptcha.py`14(今回追加した
+    Max-Ageアサーション1行を含む) + `test_health.py`3 + 既存の
+    smoke-test関連2件 = **合計31件、全件成功**。
+- **フェーズ4/5へのフィードバック(ブロッカーではない、次回整理推奨):**
+  `internal-spec-cyberhome.md`は`download.cgi`/`news.cgi`にも防御的に
+  `$CGI::PARAM_UTF8 = 1;`を設定すべきかどうかを明記していない(現状は
+  「英数字のみバリデーションだから実害なし」で機能上は問題ないが、将来
+  日本語入力を扱うパラメータが両CGIに追加された場合に同種のミスが再発しうる)。
+  次の内部仕様改訂または保守タスクで、3 CGI共通の方針として明記することを推奨する。
+- 本チェックポイントはドキュメント更新とは別コミットで、実装+テストコード変更を
+  まとめて記録する。
+
+**このチェックポイントはフェーズ6(実装・単体テスト)の差し戻し対応であり、
+フェーズ7(システムテスト)の再判定そのものではない。** フェーズ7の合否判定は
+p7-system-testerが別途実施するものであり、本チェックポイントではその判定を代行
+していない。
+
+**次のアクション:** フェーズ7(システムテスト)を再実施し、`docs/specs/system-test-report.md`
+「発見した問題1」「発見した問題2」双方が解消されていることを実機相当の検証で確認した上で、
+改めて合否判定を得ること。フェーズ7が合格するまでフェーズ8(E2Eテスト)には着手しないこと。
+

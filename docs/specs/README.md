@@ -2,9 +2,25 @@
 
 ## 🔴 再開時に最初に読むこと(/clear後はここから)
 
-**現在地:** フェーズ1〜6が完了、**フェーズ7(システムテスト)は2026-08-02に実施し
-「不合格(要修正)」判定。`contact.cgi`の日本語入力文字化けバグ(下記参照)をフェーズ6へ
-差し戻し、修正・再テストしてからフェーズ8(E2Eテスト)へ進むこと。**
+**現在地:** フェーズ1〜6が完了、フェーズ7(システムテスト)は2026-08-02に実施し
+「不合格(要修正)」判定。**同日中にフェーズ6への差し戻し修正(`contact.cgi`の
+文字化けバグ・CORS Max-Age)を完了した(下記参照)。フェーズ7はまだ再実施・再判定
+されていない(この修正自体はフェーズ7の再判定を構成しない)。次に着手すべきは
+フェーズ7の再実施であり、合格するまでフェーズ8(E2Eテスト)へは進まないこと。**
+
+**2026-08-02フェーズ6差し戻し対応完了(`contact.cgi`文字化けバグ・CORS Max-Age):**
+`site/cgi-bin/contact.cgi`の`main()`内、`CGI->new`直前に`$CGI::PARAM_UTF8 = 1;`を
+追加し、日本語フォーム入力の文字化けを修正した(`ContactLogic.pm`・`Common.pm`側は
+調査の結果いずれも正しくデコードされた文字列を受け取る前提で正しく実装済みだった
+ため無変更)。`api/app/main.py`の`CORSMiddleware`に`max_age=86400`を追加し
+(`internal-spec-integration.md` 5.2節・8章の確定値と突合済み)、
+`api/tests/test_recaptcha.py`ケース13にヘッダーアサーションを追加した。回帰テストとして
+`site/cgi-bin/lib/t/ContactCgiUtf8Boundary.t`(CGI.pmスタブ経由で実際に`contact.cgi`を
+子プロセス実行しUTF-8デコードを検証、5ケース)を新規追加し、修正前は実際に2ケースが
+失敗する(バグを検出する)ことを確認した上で、修正後に全件成功することを確認した。
+Perl 72件(既存67+新規5)・pytest 31件、全件成功。詳細は`docs/PROJECT_STATUS.md`
+チェックポイント20を参照。**フェーズ7の再判定はp7-system-testerが別途実施するもので
+あり、本対応では代行していない。**
 
 **2026-08-02フェーズ7(システムテスト)実施・不合格判定:**
 `docs/specs/internal-spec-integration.md`のCyberhome⇔Vercel連携契約を中心に、
@@ -134,19 +150,24 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 全ドキュメントへ反映済み。
 
 **次回再開時に最初にやること:**
-1. **フェーズ6への差し戻し対応:** `site/cgi-bin/contact.cgi`に`$CGI::PARAM_UTF8 = 1;`
-   (または`use CGI '-utf8';`)を追加し、日本語フォーム入力の文字化けを修正する。
-   あわせて`api/app/main.py`のCORSMiddlewareに`max_age=86400`を追加する(軽微、
-   任意だが推奨)。詳細は[system-test-report.md](system-test-report.md)を参照。
-2. 修正後、システムテスト(フェーズ7)を再実施し、特に日本語値を含む
-   `contact.cgi`の正常系・エラー系を再確認した上で合格判定を得る。
-3. フェーズ7再合格後、フェーズ8(p8-e2e-tester、E2Eテスト)に着手する。
+1. **フェーズ7(システムテスト)を再実施する。** チェックポイント20で
+   `contact.cgi`の`$CGI::PARAM_UTF8 = 1;`追加とCORS Max-Age修正は完了済みだが、
+   これはフェーズ6側の差し戻し対応であり、フェーズ7の合否判定そのものではない。
+   p7-system-testerとして、特に日本語値を含む`contact.cgi`の正常系・エラー系
+   (通知メール・自動返信メール・エラー再描画・`contact_log.txt`記録)と
+   `OPTIONS /api/verify-recaptcha`の`Access-Control-Max-Age`ヘッダーを実際に
+   再検証し、`docs/specs/system-test-report.md`を更新した上で合否判定を得ること。
+2. フェーズ7再合格後、フェーズ8(p8-e2e-tester、E2Eテスト)に着手する。
    `docs/PROJECT_STATUS.md`チェックポイント18の残タスク一覧(特に1・7・8:
    Vercel/reCAPTCHA実値、GitHub Secrets、Cyberhome非公開ファイルの実配置)のうち
    運営者が対応可能なものを先に進めておくと、フェーズ8で実機に対するテストが
    実施しやすくなる。
-4. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
+3. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
    詳細・実機確認事項)はフェーズ8以降と並行して確認する。
+4. (非ブロッキング、次回内部仕様改訂時に整理)`internal-spec-cyberhome.md`は
+   `download.cgi`/`news.cgi`にも防御的に`$CGI::PARAM_UTF8 = 1;`を設定すべきかを
+   明記していない。現状は両CGIとも英数字のみのバリデーションのため実害はないが、
+   将来日本語入力パラメータが追加された際の再発防止として方針を明記することを推奨する。
 
 **完了済み:**
 1. `git push` は `gh auth setup-git` でGCMの詰まりを回避し、完了済み(`origin/main` = `0f6c50c`)。

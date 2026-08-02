@@ -173,6 +173,7 @@ def test_preflight_options_returns_cors_headers(client):
         == "https://jyoho1.web.cyberhome.ne.jp"
     )
     assert "POST" in resp.headers.get("access-control-allow-methods", "")
+    assert resp.headers.get("access-control-max-age") == "86400"
 
 
 # 14: fail-open発生時のログにrecaptcha_responseの値が含まれない

@@ -42,6 +42,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
     allow_credentials=False,
+    max_age=86400,
 )
 
 app.include_router(health.router)      # /health

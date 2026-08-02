@@ -50,6 +50,13 @@ exit 0;
 sub main {
     binmode(STDOUT, ':encoding(UTF-8)');
 
+    # CGI.pmは既定でPOST/クエリ文字列のバイト列をLatin-1相当のまま扱い、
+    # UTF-8としてのデコードを行わない(マルチバイト文字が文字化けする)。
+    # $CGI::PARAM_UTF8を立てることで、param()が返す値をUTF-8として
+    # デコード済みのPerl文字列にする(contact.htmlのフォーム送信はUTF-8
+    # 前提、internal-spec-cyberhome.md 0.1節)。CGI->newより前に設定する
+    # 必要はないが、newと同じ場所で明示しておく。
+    $CGI::PARAM_UTF8 = 1;
     my $cgi = CGI->new;
     my $script_dir     = Common::resolve_script_dir();
     my $contact_html   = File::Spec->catfile($script_dir, '..', 'contact.html');

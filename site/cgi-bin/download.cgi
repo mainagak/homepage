@@ -60,7 +60,7 @@ sub main {
         return;
     }
 
-    my ($book) = $file =~ m{\A(book[12])/};
+    my ($book) = $file =~ m{\A(book[123])/};
 
     # ステップ4: 書籍別認可チェック
     unless (DownloadLogic::authorize_book_access($remote_user, $book)) {

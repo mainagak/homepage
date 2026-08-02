@@ -1,0 +1,18 @@
+AuthType Basic
+AuthName "Book Bonus Content"
+AuthUserFile /virtual/xxxxxx/public_html/dl/.htpasswd
+Require valid-user
+
+<Files ".htpasswd">
+  Require all denied
+  Order allow,deny
+  Deny from all
+</Files>
+
+<FilesMatch "\.txt$">
+  Require all denied
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+Options -Indexes

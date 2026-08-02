@@ -1,0 +1,4 @@
+AuthType Basic
+AuthName "Book Bonus Content"
+AuthUserFile /virtual/xxxxxx/public_html/dl/.htpasswd
+Require valid-user

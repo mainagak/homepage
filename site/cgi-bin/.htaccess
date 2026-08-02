@@ -1,0 +1,16 @@
+# download.cgi のみをBasic認証で保護する。contact.cgi/news.cgiは公開のまま。
+# (internal-spec-cyberhome.md 0.1節・7.2節)
+<Files "download.cgi">
+  AuthType Basic
+  AuthName "Book Bonus Content"
+  AuthUserFile /virtual/xxxxxx/public_html/dl/.htpasswd
+  Require valid-user
+</Files>
+
+# lib/ 配下のソースを直接URLで取得できないようにする(念のための二重対策、
+# lib/.htaccess本体でも Require all denied を設定済み)
+<FilesMatch "\.pm$">
+  Require all denied
+  Order allow,deny
+  Deny from all
+</FilesMatch>

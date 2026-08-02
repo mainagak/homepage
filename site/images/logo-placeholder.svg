@@ -1,19 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  PLACEHOLDER LOGO — pending the real logo asset from the operator
-  (docs/specs/e2e-test-report.md「発見した問題3」、docs/PROJECT_STATUS.md
-  チェックポイント22, 参考サイトの実アセット取得が本環境の制約で行えなかった経緯)。
+  INTERIM LOGO — a Claude-Code-drafted mark for FroEduX, pending the operator's
+  final real brand asset (docs/PROJECT_STATUS.md checkpoint 26). Not final
+  branding; replace freely once the operator has a real logo.
 
-  This is the single source-of-truth logo image file referenced from every
-  page's <header> (external-spec.md「ロゴ画像は1箇所の元データを更新すると、
+  This remains the single source-of-truth logo image file referenced from
+  every page's <header> (external-spec.md「ロゴ画像は1箇所の元データを更新すると、
   サイト内の全ての表示箇所に反映される構成にすること」、architecture.md
   決定事項T2「同一画像ファイルを複数ページから参照する形で十分」)。
-  Replace this file's contents with the real logo once available; no HTML
-  changes will be needed anywhere in site/.
+  Replacing this file's contents is enough; no HTML changes are needed
+  anywhere in site/.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 36" role="img" aria-labelledby="froeduxLogoTitle">
     <title id="froeduxLogoTitle">FroEduX</title>
-    <rect x="0" y="2" width="32" height="32" rx="8" fill="#3498db"/>
-    <text x="16" y="24" font-family="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" font-size="15" font-weight="bold" fill="#ffffff" text-anchor="middle">Fx</text>
+    <defs>
+        <linearGradient id="froeduxBadgeGradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#3498db"/>
+            <stop offset="100%" stop-color="#2c7fb8"/>
+        </linearGradient>
+    </defs>
+    <rect x="0" y="2" width="32" height="32" rx="8" fill="url(#froeduxBadgeGradient)"/>
+    <!-- 学びを象徴する角帽(graduation cap)モチーフ -->
+    <g transform="translate(16,17)">
+        <polygon points="0,-7 11,-2 0,3 -11,-2" fill="#ffffff"/>
+        <rect x="-4.5" y="-1" width="9" height="6.5" rx="1" fill="#ffffff" opacity="0.92"/>
+        <line x1="8" y1="-1.2" x2="8" y2="5.5" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="8" cy="6.5" r="1.5" fill="#ffffff"/>
+    </g>
     <text x="42" y="25" font-family="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" font-size="20" font-weight="bold" fill="#ffffff">FroEduX</text>
 </svg>

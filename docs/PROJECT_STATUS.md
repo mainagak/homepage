@@ -1526,3 +1526,55 @@ p9-final-reviewerとして、フェーズ1〜8の全成果物(`docs/PROJECT_STAT
 **次のアクション:** 運営者が上記「運営者が行う必要がある作業」(`final-review.md`
 末尾に一覧化)を進め、実インフラ確定後にp10-maintainerプロセスでの保守サイクルへ
 移行する。
+
+## 2026-08-02: チェックポイント26 — 運営者作業リストのうち実行可能項目を消化
+
+`final-review.md`の運営者アクション項目のうち、外部アカウント登録を伴わないものを
+Claude Codeで実行し、ユーザーに3点の意思決定を確認した(AskUserQuestion)。
+
+**ユーザー確認結果:**
+1. ロゴ画像: **Claude Codeで暫定ロゴを作成**することを選択。
+2. 設立年「2030年」: **2030年のまま確定**(公開前の最終確認、Phase 1の回答を再確認)。
+3. リポジトリルート直下の未追跡レガシーファイル群: **削除する**ことを選択。
+
+**実行内容:**
+- `site/images/logo-placeholder.svg`を、FroEduXブランドカラー(`#3498db`系グラデー
+  ション)+角帽(graduation cap)モチーフのシンプルな暫定ロゴに差し替え。ファイル名
+  ・参照箇所(全ページ`<header>`)は変更不要(既存の一元管理設計どおり)。ローカル
+  HTTPサーバー+Playwright/Chromiumで実際にヘッダー表示を目視確認し、ダークヘッダー
+  背景(`#2c3e50`)上で正しく視認できることを確認した。まだ最終ブランディングでは
+  ない旨をSVG内コメントに明記。
+- `docs/specs/external-spec.md`冒頭のコメント3件(チャットUI表現・FAQ空状態・
+  設立年2030年)すべてに「解消済み/最終確認済み」の追記を行い、Phase 2レビュー
+  以来の宿題を明示的にクローズした。
+- リポジトリルート直下の未追跡レガシーファイル(`-mainagak.gitignore`・`README.md`・
+  `index.html`・`package-mainagak.json`・`package-lock-mainagak.json`・
+  `dist-release/`・`public/`・`src/`)を削除。いずれもGit未追跡だったため、削除は
+  コミット不要(`git status`で消失を確認済み)。
+- GitHub Secrets/Variablesのうち、外部アカウント登録に依存しない2件を`gh` CLI
+  (認証済み、`repo`スコープ)で実際に登録した:
+  - Secret `SMOKE_TEST_SECRET`(`openssl rand -hex 32`で新規生成した64文字HEX値)
+  - Variable `SITE_BASE_URL` = `https://jyoho1.web.cyberhome.ne.jp`(既に確定済みの値)
+- `INTEGRATION_HMAC_SECRET`(新規生成、64文字HEX)を`site/conf/hmac_secret.txt`
+  (`.gitignore`対象、コミットされない)に実値として書き込んだ。Perlの
+  `Common::read_secret_file()`は前後の空白のみ除去しファイル内容全体を返す実装の
+  ため、コメント行なし・値のみのファイルにした(`.example`ファイルのコメント付き
+  書式とは異なる点に注意)。
+- Google公式のreCAPTCHA v2テスト用シークレットキー(`developers.google.com/recaptcha/docs/faq`
+  で値を確認済み、非公開情報ではなく公式に公開された固定値)を含め、Vercel
+  ダッシュボードにそのまま転記できる下書きを`api/.env.local`(`.gitignore`対象)
+  に作成した: `RECAPTCHA_TEST_SECRET_KEY`・`INTEGRATION_HMAC_SECRET`(上記と同一値)・
+  `SMOKE_TEST_SECRET`(上記GitHub Secretsと同一値)・`ALLOWED_ORIGIN`は確定値を
+  記入済み。`RECAPTCHA_SECRET_KEY`(本番reCAPTCHAシークレット)のみ、実際の
+  Google reCAPTCHA v2登録が済むまでダミー値のまま。
+
+**まだ運営者本人でないと完了できない項目(変更なし、詳細は`final-review.md`参照):**
+Vercelへの実デプロイ+`VERCEL_API_BASE_URL`の確定、Google reCAPTCHA v2の実キー
+登録、実GA4測定IDの取得、本物のロゴ画像アセット(暫定ロゴから本番ブランディングへの
+差し替え)、Cyberhome契約プラン確認+実サーバーへの`.htpasswd`/`hmac_secret.txt`配置、
+`CYBERHOME_FTP_*`系GitHub Secrets登録。
+
+**次のアクション:** 上記の運営者専用項目が揃い次第、Vercelへの初回デプロイ→
+`VERCEL_API_BASE_URL`変数登録→`playwright-smoke.yml`等4ワークフローの初回実行
+確認、という順で進める。すべて完了後、フェーズ10(保守メンテナンス)の最初の
+最優先タスクであるFAQ管理GUI実装に着手できる。

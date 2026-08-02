@@ -280,15 +280,26 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
    チェックポイント25)。パイプライン(フェーズ1〜9)側の作業はすべて完了している。**
    次に必要なのは、運営者本人による実世界の作業(下記2)であり、エージェント側の
    追加コード修正ではない。
-2. **運営者が行う必要がある作業(`final-review.md`末尾に詳細一覧あり):**
-   Vercelへの実デプロイ(→`VERCEL_API_BASE_URL`反映)・Google reCAPTCHA v2登録
-   (→サイトキー/シークレットキー反映)・実GA4測定IDの取得(→`G-XXXXXXXXXX`置換)・
-   実ロゴアセットの入手(→`logo-placeholder.svg`置換)・Cyberhome実契約情報の確認
-   (月額費用・Apacheバージョン・`AuthUserFile`絶対パス)・GitHub Secrets/Variables
-   登録(`CYBERHOME_FTP_*`・`SITE_BASE_URL`・`VERCEL_API_BASE_URL`・
-   `SMOKE_TEST_SECRET`等)・`.htpasswd`/`hmac_secret.txt`の実ファイルFTP配置・
-   設立年「2030年」の対外表記の事業判断・リポジトリルート直下の未追跡レガシー
-   ファイル群の削除可否判断。
+2. **運営者が行う必要がある作業(`final-review.md`末尾に詳細一覧あり。
+   チェックポイント26で一部完了・一部は意思決定のみ完了):**
+   - ~~設立年「2030年」の対外表記の事業判断~~ → **完了(2030年のまま確定)**
+   - ~~リポジトリルート直下の未追跡レガシーファイル群の削除可否判断~~ →
+     **完了(削除実施済み)**
+   - ~~実ロゴアセットの入手~~ → **一次対応済み**(Claude Codeが暫定ロゴを作成し
+     `logo-placeholder.svg`を差し替え済み。本番ブランディングへの最終差し替えは
+     引き続き運営者の任意タイミングで可)
+   - ~~GitHub Secrets/Variables登録~~のうち`SMOKE_TEST_SECRET`(Secret、新規生成
+     済み)・`SITE_BASE_URL`(Variable)は**登録済み**。`INTEGRATION_HMAC_SECRET`
+     (Vercel側で使う値)も生成済みで`site/conf/hmac_secret.txt`
+     (Git管理外)・`api/.env.local`(Git管理外、Vercelダッシュボードへの
+     転記用下書き)に用意済み。
+   - 残る運営者専用作業: Vercelへの実デプロイ(→`VERCEL_API_BASE_URL`を
+     GitHub Variableへ反映)・Google reCAPTCHA v2登録(→サイトキー/実シークレット
+     キーを反映、`RECAPTCHA_TEST_SECRET_KEY`はGoogle公式テストキーとして
+     `api/.env.local`に用意済みなので登録不要)・実GA4測定IDの取得
+     (→`G-XXXXXXXXXX`置換)・Cyberhome実契約情報の確認(月額費用・Apache
+     バージョン・`AuthUserFile`絶対パス)・GitHub Secrets登録(`CYBERHOME_FTP_*`)・
+     `.htpasswd`/`hmac_secret.txt`の実ファイルFTP配置(値は生成済み、配置のみ)。
 3. **Phase 10(保守サイクル)へ正式に繰り越す項目(`final-review.md`参照):**
    `site/qr/book1.html`・`book2.html`へのFAQウィジェット追加、
    `internal-spec-vercel.md`7章のFAQ管理GUI・Neon DB導入・CSRF実装(既存合意通り

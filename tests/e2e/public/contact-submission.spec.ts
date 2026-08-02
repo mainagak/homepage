@@ -52,7 +52,14 @@ test.describe('Contact form – happy path (CI-only reCAPTCHA bypass)', () => {
     // The real reCAPTCHA widget cannot be operated by an automated browser;
     // inject the already-verified token and unlock the submit button exactly as
     // onRecaptchaSuccess() would, then submit through the real <form>.
-    await page.fill('#verify_token', verifyBody.token);
+    // #verify_token is `type="hidden"`, so it's never "visible" per Playwright's
+    // actionability checks - page.fill() would time out waiting for that.
+    // Setting .value directly via evaluate() actually matches production
+    // behavior more closely, since that's exactly what onRecaptchaSuccess()
+    // itself does (a JS assignment, not simulated typing into a visible field).
+    await page.locator('#verify_token').evaluate((el: HTMLInputElement, value: string) => {
+      el.value = value;
+    }, verifyBody.token);
     await page.evaluate(() => {
       const button = document.getElementById('contact-submit') as HTMLButtonElement | null;
       if (button) button.disabled = false;

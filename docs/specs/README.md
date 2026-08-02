@@ -15,6 +15,26 @@
 スコープ)は未着手のまま。CSRF実装(7.2節)はスコープ外と判断し見送り、ギャップとして
 記録した(詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照)。
 
+**2026-08-02フェーズ6 Task#3(Cyberhome側Perl CGI実装)完了:**
+`internal-spec-cyberhome.md`に基づき、`site/cgi-bin/`配下に`contact.cgi`・
+`download.cgi`・`news.cgi`とロジック分離した`.pm`モジュール4本
+(`Common.pm`/`ContactLogic.pm`/`DownloadLogic.pm`/`NewsLogic.pm`)、
+QRランディングページ(`qr/book1.html`・`book2.html`)、`.htaccess`確定版6本、
+`templates/header.html`・`footer.html`を実装した。HMACトークン検証は
+`internal-spec-integration.md` 1.2節のロジックをそのまま実装(`Digest::SHA`の
+みでCPAN不要)。Test::More単体テスト67ケース(`Common.t`14/`ContactLogic.t`27/
+`DownloadLogic.t`19/`NewsLogic.t`7)を実装し、全件成功を確認した。
+`site/contact.html`等の静的ページ(`contact.cgi`が依存するプレースホルダー
+コメントを含む必要あり)は本タスクの範囲外として次タスクへ申し送り。詳細は
+`docs/PROJECT_STATUS.md`チェックポイント16を参照。
+
+**2026-08-02フェーズ6 Task#4(Vercel/FastAPI実装)完了:** `internal-spec-vercel.md`に
+基づき、`api/app/`配下にFastAPIアプリ本体一式(`main.py`/`core/`/`middleware/`/
+`routers/`/`models/`/`services/`)を実装した。pytest単体テスト29ケース
+(`test_faq.py`12/`test_recaptcha.py`14/`test_health.py`3)、全件成功。
+`admin.py`等のFAQ管理GUI関連はフェーズ10(保守サイクル)に委譲し未実装のまま。
+詳細は`docs/PROJECT_STATUS.md`チェックポイント15を参照。
+
 **2026-08-02フェーズ6 Task#2(データモデル)完了:**
 `internal-spec-datamodel.md`に基づき、MVP実データファイル`api/app/data/faq.json`
 (FAQ 0件で開始)、参照用JSON Schema(`docs/specs/data/faq.schema.json`)、将来のNeon
@@ -153,16 +173,32 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
     (`api/tests/`、6.3/6.4/6.5節と1対1対応)全件成功、ruffクリーン。管理GUI(7章、
     Phase 10スコープ)は未着手。詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照。
 
+14. **フェーズ6 Task#3(Cyberhome側Perl CGI実装、Wave2)完了(2026-08-02):**
+    `internal-spec-cyberhome.md`に基づき`site/cgi-bin/`配下に`contact.cgi`・
+    `download.cgi`・`news.cgi`+`.pm`モジュール4本(`Common`/`ContactLogic`/
+    `DownloadLogic`/`NewsLogic`)、QRランディングページ、`.htaccess`確定版6本、
+    `templates/header.html`・`footer.html`を新規実装。HMACトークン検証は
+    `internal-spec-integration.md` 1.2節のロジックをそのまま実装。Test::More
+    単体テスト67ケース(`Common.t`14/`ContactLogic.t`27/`DownloadLogic.t`19/
+    `NewsLogic.t`7)全件成功。`site/contact.html`等の静的ページは範囲外として
+    次タスクへ申し送り。詳細は`docs/PROJECT_STATUS.md`チェックポイント16参照。
+
 **残タスク:**
-14. フェーズ6の残りタスク(連携契約実装は本タスクでVercel側分を実装済み、
-    Cyberhome側CGI実装は並行タスクで進行中、テスト・CI/CD詳細実装)に着手する。
-15. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
-16. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
+15. フェーズ6の残りタスク(テスト・CI/CD詳細実装)に着手する
+    (連携契約実装・Cyberhome側CGI実装・Vercel側FastAPI実装はTask#2〜4で完了済み)。
+16. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
+17. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
     現行方針と不整合)の扱いを整理する(非ブロッキング、詳細は
     `docs/PROJECT_STATUS.md`チェックポイント13の「フェーズ4/5へのフィードバック」参照)。
-17. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
+18. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
     ダブルサブミット方式を`admin.py`ルーターとともに実装する(Task#4では
     スコープ外と判断し見送った、詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照)。
+19. `site/contact.html`・`contact-thanks.html`・`privacy.html`(+記事一覧入口の
+    `news.html`)を実装する静的ページタスク着手時、`contact.cgi`が要求する
+    プレースホルダーコメント(`<!--CONTACT_ERRORS--><!--/CONTACT_ERRORS-->`、
+    `<!--VALUE:last_name-->`等)を`contact.html`に含めること(Task#3では
+    `contact.cgi`側の実装のみ完了、`contact.html`自体は未作成。詳細は
+    `docs/PROJECT_STATUS.md`チェックポイント16参照)。
 
 ---
 
@@ -180,7 +216,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
 | 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
-| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、Task#2: データモデル 完了、Task#4: Vercel/FastAPI実装 完了、2026-08-02) |
+| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、Task#2: データモデル 完了、Task#3: Cyberhome側Perl CGI実装 完了、Task#4: Vercel/FastAPI実装 完了、2026-08-02) |
 | 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 未着手 |
 | 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 未着手 |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |

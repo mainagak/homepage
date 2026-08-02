@@ -596,3 +596,88 @@ Vercel側FastAPI実装、テスト・CI/CD詳細実装)に着手する。Vercel�
 (pytest 29ケース)までであり、システムテスト・E2Eテスト(フェーズ7・8)は
 まだ実施していない。上記CSRFのギャップはフェーズ10(FAQ管理GUI実装)着手時に
 解消すること。
+
+## 2026-08-02: チェックポイント16 — フェーズ6 Task#3(Cyberhome側Perl CGI実装、Wave2)完了
+
+- `docs/specs/internal-spec-cyberhome.md`(+`internal-spec-integration.md`のCyberhome側
+  HMAC検証契約)に基づき、`/site`配下にPerl CGI一式(`contact.cgi`/`download.cgi`/
+  `news.cgi`)・`.pm`モジュール4本・QRページ・`.htaccess`確定版を新規実装した。
+  `/api`配下(並行実行中のTask#4)は一切変更していない。
+- **実装したファイル:**
+  - `site/cgi-bin/lib/Common.pm`(`html_escape`/`strip_newlines`/
+    `resolve_script_dir`/`read_secret_file`/`render_template`/`write_log`/
+    `render_error_page`/`install_die_handler`/`iso8601_now`。CPAN不可のため
+    File::Basename・Cwd・File::Spec・Fcntlのみ使用)
+  - `site/cgi-bin/lib/ContactLogic.pm`(`validate_input`/`verify_token`
+    (`internal-spec-integration.md` 1.2節のPerlサンプルをそのまま実装、
+    `Digest::SHA::hmac_sha256_hex`使用)/`is_duplicate_submission`/
+    `is_business_hours`/`build_notification_mail`/`build_autoreply_mail`/
+    `send_via_sendmail`(シェルを経由しないリスト形式`open('|-', ...)`))
+  - `site/cgi-bin/lib/DownloadLogic.pm`(`resolve_mime_type`(拡張子ハードコード
+    表、`File::MimeInfo`不使用)/`validate_file_param`/`authorize_book_access`
+    (`%BOOK_USERS`マッピング)/`rotate_log_if_needed`/`format_access_log_line`)
+  - `site/cgi-bin/lib/NewsLogic.pm`(`list_article_files`/`parse_article_file`
+    (2行目カテゴリの寛容パース、認識できない文字列は本文とみなし既定値
+    「お知らせ」にフォールバック)/`render_list_html`/`render_detail_html`)
+  - `site/cgi-bin/contact.cgi`・`download.cgi`・`news.cgi`(CGI入出力の配線のみ、
+    ビジネスロジックは上記`.pm`に分離。3CGIとも`eval{}`+`Common::install_die_handler`
+    で500エラーを捕捉、`Status:`ヘッダーを明示的に出力)
+  - `.htaccess`確定版6本: `site/cgi-bin/.htaccess`(新設、`<Files "download.cgi">`
+    のみBasic認証)、`site/cgi-bin/lib/.htaccess`・`site/conf/.htaccess`・
+    `site/Contents/.htaccess`(新設、`Require all denied`)、`site/dl/.htaccess`・
+    `site/qr/.htaccess`(確定版に更新、`AuthName`を3箇所で完全一致させる、
+    0.2節のrealm共有の工夫)
+  - `site/qr/book1.html`・`book2.html`(静的QRランディングページ、
+    `download.cgi`への案内リンクを含む)
+  - `site/templates/header.html`・`footer.html`(`news.cgi`が文字列連結で
+    使う最小限の共通HTML断片。既存`site/index.html`のnav構造を踏襲)
+  - `site/cgi-bin/lib/t/Common.t`(14)・`ContactLogic.t`(27)・
+    `DownloadLogic.t`(19)・`NewsLogic.t`(7)、**合計67ケース**
+    (`internal-spec-testing.md` 3.1節の内訳表と1対1で対応)
+  - `site/cgi-bin/*.cgi`に実行権限(+x)を付与(追加質問Q1=A確定方針の通り、
+    Cyberhome側の自動実行可能前提を維持しつつGit側でも権限を記録)
+- **意図的に作成していないもの(スコープ外、次タスクへの申し送り):**
+  `site/contact.html`・`contact-thanks.html`・`privacy.html`・`news.html`
+  (記事一覧の静的入口ページ)は本タスクの指示範囲(`contact.cgi`/`download.cgi`/
+  `news.cgi`/QRページ/`.htaccess`/`.pm`モジュール/HMAC連携/単体テスト)に
+  含まれていなかったため作成していない。`contact.cgi`は`../contact.html`を
+  `Common::render_template()`で読み込み、`<!--CONTACT_ERRORS-->...<!--/CONTACT_ERRORS-->`
+  ブロック型プレースホルダーと`<!--VALUE:last_name-->`等の値型プレースホルダーを
+  置換する設計で実装済みだが、**現時点では`site/contact.html`自体が存在しないため、
+  実機デプロイ後にこのファイルが正しいプレースホルダーを含む形で用意されない限り、
+  `contact.cgi`はバリデーションエラー時に落ちる(die→500エラーページ)。**
+  これは`internal-spec-cyberhome.md`の設計自体の欠落ではなく(2.8節はテンプレートの
+  中身の詳細まで規定していない)、タスク分担上のギャップであるため、フェーズ4/5への
+  差し戻しではなくフェーズ6の次のタスク割り当て(静的ページ実装)側で
+  `contact.html`に上記プレースホルダーを含めるよう申し送る。`news.cgi`は
+  `templates/header.html`/`footer.html`(本タスクで作成済み)のみに依存するため、
+  この制約を受けない(単体では動作可能)。
+- **単体テスト実行結果:** ローカル環境にPerl 5.42(Cygwin、Perl 5.16よりかなり新しいが
+  本タスクで使用した機能はいずれも5.16のコアモジュールの範囲内)が導入済み。
+  `CGI.pm`はこのローカル環境にインストールされていなかったため(Perl 5.20以降で
+  コアから外れたモジュール。Cyberhome実機のPerl 5.16ではコア同梱のため問題ない)、
+  `perl -c`によるCGIスクリプト3本の構文検証のみ、ローカルの一時ディレクトリに
+  置いた最小限のダミー`CGI.pm`スタブ(`new`/`param`のみ、非シップ)を`PERL5LIB`に
+  加えて実施し、3本とも構文エラーなしを確認した。`.pm`モジュール4本は本物の
+  `Digest::SHA`/`Time::Local`/`File::Temp`等のコアモジュールでそのまま
+  `perl -I. t/*.t`を個別実行し、**67件全て成功**(`Common.t`14/14、
+  `ContactLogic.t`27/27、`DownloadLogic.t`19/19、`NewsLogic.t`7/7)。
+  CI(`perl-tests.yml`、Task#1で作成済み)は`ubuntu-latest`+標準Perlで
+  `prove -l site/cgi-bin/lib/t/`を実行する設計であり、ローカルではCygwin環境の
+  Perlパッケージが不完全で`prove`本体(`TAP::Harness`)自体が動作しなかったため、
+  同等の検証を`perl`個別実行で代替した(4ファイルの実行結果を手動で合算し67/67を
+  確認、CI環境側は標準的なPerlディストリビューションのため`prove`自体は
+  正常に動作する見込み)。
+- **実機での動作確認は一切行っていない**(Apache mod_cgi・実際の`sendmail`・
+  実際のBasic認証・実際のFTPSデプロイのいずれも本タスクの範囲外)。`sendmail`
+  呼び出しは`send_via_sendmail`の第2引数(実行ファイルパス)をテスト用のダミー
+  実行可能ファイルに差し替えてモックした。
+- 本チェックポイントの後、gitコミットを実施する(実装+テストコード+
+  ドキュメント更新をまとめる)。
+
+**次のアクション:** フェーズ6の残りタスク(テスト・CI/CD詳細実装)に着手する。
+静的ページ実装タスク着手時は、上記「意図的に作成していないもの」の申し送りに従い
+`site/contact.html`(+`contact-thanks.html`・`privacy.html`)に
+`contact.cgi`が要求するプレースホルダーコメントを含めること。本タスクは単体テスト
+(Perl Test::More 67ケース)までであり、システムテスト・E2Eテスト(フェーズ7・8)は
+まだ実施していない。

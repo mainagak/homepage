@@ -1578,3 +1578,85 @@ Vercelへの実デプロイ+`VERCEL_API_BASE_URL`の確定、Google reCAPTCHA v2
 `VERCEL_API_BASE_URL`変数登録→`playwright-smoke.yml`等4ワークフローの初回実行
 確認、という順で進める。すべて完了後、フェーズ10(保守メンテナンス)の最初の
 最優先タスクであるFAQ管理GUI実装に着手できる。
+
+## 2026-08-02: チェックポイント28 — 初回本番デプロイ完了(Vercel・Cyberhome双方)
+
+運営者(ユーザー)がVercelへの`vercel login`実行、Cyberhome FTP認証情報の提供、
+ダウンロードページ用Basic認証パスワードの決定を行い、Claude Codeが実際の本番
+デプロイ作業とその過程で発見された実インフラ起因の不具合修正を行った。
+
+**Vercel本番デプロイ:**
+- `vercel link`でプロジェクト`maina8/api`を作成、`vercel --prod`で本番デプロイ
+  完了。本番URL: `https://api-seven-steel-73.vercel.app`。
+- Production環境変数5件を`vercel env add`で登録(`INTEGRATION_HMAC_SECRET`・
+  `SMOKE_TEST_SECRET`・`RECAPTCHA_TEST_SECRET_KEY`・`ALLOWED_ORIGIN`・
+  `RECAPTCHA_SECRET_KEY`[ダミー、reCAPTCHA実登録待ち])。
+- `GET /health`(200 `{"status":"ok"}`)、`GET /api/faq`(200、0件)、
+  CORS preflight(`Access-Control-Allow-Origin`が実サイトオリジンに一致、
+  `Access-Control-Max-Age: 86400`)を実際に疎通確認した。
+- `site/js/contact-form.js`・`chat-widget.js`の`VERCEL_API_BASE_URL`プレース
+  ホルダーを実URLに置換(コミット`36c4d87`)。
+- `GitHub Actions Variable VERCEL_API_BASE_URL`・`SITE_BASE_URL`を登録。
+
+**Cyberhome初回デプロイまでに発見・修正した実問題(すべて`deploy-cyberhome.yml`
+実行時に判明。ペーパーレビューでは発見できなかった、実機ならではの不具合):**
+1. `smoke-test`ジョブ(`playwright-smoke.yml`を再利用可能ワークフローとして呼び
+   出す構成)が権限不足で起動すらしない`startup_failure`。原因: 呼び出し先の
+   `notify-on-failure`が要求する`issues: write`が、呼び出し元で明示的に許可され
+   ていなかった(再利用可能ワークフローはデフォルトで縮小された権限しか継承しない)。
+   `smoke-test`ジョブに`permissions: issues: write`を明示して解決(`57c8519`)。
+2. `api-tests.yml`のruff lintが失敗。原因: ローカル(`api/`配下から実行)と
+   CI(リポジトリルートから`ruff check api/`を実行)とでisortの先頭パッケージ
+   判定が変わり、import順の期待値が食い違っていた。CIと同じ起動方法で再現・
+   修正し、再発防止のため`ruff==0.16.1`にバージョン固定(`2869e51`)。
+3. `backup`ジョブの`lftp`が`mirror: Not connected`/`Unknown command`で失敗。
+   原因: `-u user,pass -e "script" host`という、`-e`と末尾ホスト引数を組み合わせる
+   曖昧な呼び出し方。`open -u user,pass host`を`-e`スクリプト内に明示する形に
+   変更して解決(`862c88c`)。
+4. TLS証明書エラー(`The certificate is NOT trusted`)。CyberhomeのFTPSサーバーが
+   自己署名/不明CA発行の証明書を使用しているため。`set ssl:verify-certificate no`
+   (lftp側)・`security: loose`(`SamKirkland/FTP-Deploy-Action`側)を追加して
+   解決(`2424ca3`)。通信自体は暗号化されたままで、証明書チェーンの信頼検証のみ
+   緩和している。
+5. FTPログイン情報のユーザー名/パスワードが運営者からの申告時点で入れ替わって
+   いた(`u2000343_0001`がユーザー名、`ttdyi5Hg`がパスワードが正)。実際に
+   `530 間違ったログインです`のログイン失敗で判明し、入れ替えて解決。
+6. `FTP-Deploy-Action`が`server-dir should be a folder (must end with /)`で
+   エラー。`CYBERHOME_PUBLIC_HTML_PATH`を`/public_html`→`/public_html/`
+   (末尾スラッシュ付き)に修正して解決。
+7. `deploy`ジョブが`ETIMEDOUT`(control socket接続不能)で1回失敗したが、
+   再実行(`gh run rerun --failed`)で解消(一過性のネットワーク事象)。
+8. **`contact.cgi`/`download.cgi`/`news.cgi`が全て汎用Apache 500エラー
+   (独自エラーハンドラに到達しない、`eval`より手前で失敗)。** 運営者が
+   `cgi-bin`配下に「実行・書き込み・読み取り」権限(777相当)を付与したところ
+   悪化したため、一時的な診断用CGI(`_diag.cgi`、後で削除済み)をFTPで配置して
+   実際のPerl環境を直接確認: Perl 5.32.1(`architecture.md`記載の5.16という
+   想定は実際とは異なっていた。CGI.pm 4.51は正常にロード可能)。診断スクリプト
+   自体も755権限で500になったことから、個別ファイルではなく**`cgi-bin`
+   ディレクトリ自体が777(グループ・他人に書き込み可能)だったことが原因**と
+   特定した。多くの共有ホスティングが採用する`suEXEC`は、CGIスクリプトの
+   実行前にスクリプト自身だけでなく**設置先ディレクトリ**が group/other 書き込み
+   不可であることを要求し、違反時は`eval`にすら到達しない生のApache 500を返す。
+   `cgi-bin`ディレクトリおよび`contact.cgi`/`download.cgi`/`news.cgi`/
+   `.htaccess`を`SITE CHMOD 755`で修正し、解決を実機で確認した
+   (`curl`で200 OK、実際の記事一覧HTML/フォームHTMLが返ることを確認)。
+
+**最終スモークテスト結果(`playwright-smoke.yml`、`workflow_dispatch`実行):**
+11件中10件合格。唯一の失敗は「Contact form – happy path (CI-only reCAPTCHA
+bypass)」で、`page.fill('#verify_token')`が30秒タイムアウト。原因は実インフラ
+不具合ではなく、**Google reCAPTCHA v2の実サイトキーが未登録のまま
+(`REPLACE_WITH_RECAPTCHA_SITE_KEY`のプレースホルダー)**であるため、実際の
+reCAPTCHAウィジェットが初期化できないこと(既知・運営者アクション待ちの項目、
+新規の不具合ではない)。同じCI-bypass経路を使う「email confirmation mismatches」
+テストは合格しており、Vercel↔Cyberhome間のHMACトークン連携自体は実インフラ
+上で正しく機能することを確認済み。
+
+**残る運営者アクション(変更なし):** Google reCAPTCHA v2の実キー登録、実GA4
+測定IDの取得、本物のロゴ画像アセット。`architecture.md`の`Perl 5.16`という
+記載は実機確認の結果`5.32`に訂正が必要(非ブロッキング、次回内部仕様更新時に
+反映)。
+
+**次のアクション:** reCAPTCHA実キー登録が完了次第、`site/contact.html`の
+サイトキーと Vercel の`RECAPTCHA_SECRET_KEY`を実値に差し替え、
+`playwright-smoke.yml`を再実行して11/11合格を確認する。それ以降はフェーズ10
+(保守メンテナンス)の通常サイクルで運用する。

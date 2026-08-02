@@ -28,6 +28,7 @@ jobs:
           lftp -c "
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
+            set ssl:verify-certificate no;
             open -u \"$FTP_USER,$FTP_PASS\" \"$FTP_HOST\";
             mirror --parallel=2 /public_html ./backup_public_html;
             bye"
@@ -54,6 +55,7 @@ jobs:
           username: ${{ secrets.CYBERHOME_FTP_USER }}
           password: ${{ secrets.CYBERHOME_FTP_PASSWORD }}
           protocol: ftps
+          security: loose
           port: ${{ secrets.CYBERHOME_FTP_PORT }}
           local-dir: site/
           server-dir: ${{ secrets.CYBERHOME_PUBLIC_HTML_PATH }}

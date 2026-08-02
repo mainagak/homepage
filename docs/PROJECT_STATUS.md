@@ -1660,3 +1660,52 @@ reCAPTCHAウィジェットが初期化できないこと(既知・運営者ア�
 サイトキーと Vercel の`RECAPTCHA_SECRET_KEY`を実値に差し替え、
 `playwright-smoke.yml`を再実行して11/11合格を確認する。それ以降はフェーズ10
 (保守メンテナンス)の通常サイクルで運用する。
+
+## 2026-08-02: チェックポイント29 — reCAPTCHA実登録・ロゴ再デザイン、11/11合格達成
+
+運営者がGoogle reCAPTCHA v2を実際に登録し、サイトキー・シークレットキーを提供。
+Claude Codeが反映し、テスト自体の不具合も1件発見・修正して**スモークテスト
+11/11件全合格**に到達した。
+
+**実施内容:**
+- サイトキーを`site/contact.html`に反映(コミット`120e861`)、実サーバーへ
+  FTP配置。シークレットキーはVercel Production環境変数`RECAPTCHA_SECRET_KEY`
+  として`vercel env rm`→`vercel env add`で更新し、`vercel --prod`で再デプロイ
+  (エイリアス先URLは変わらず`api-seven-steel-73.vercel.app`のまま)。
+- 再実行した`playwright-smoke.yml`で新たな失敗を発見:
+  「Contact form – happy path (CI-only reCAPTCHA bypass)」テストが
+  `page.fill('#verify_token', ...)`で30秒タイムアウト。**reCAPTCHA登録とは
+  無関係な、テストコード自体の既存バグ**と判明: `#verify_token`は
+  `type="hidden"`であり、Playwrightの`page.fill()`は「可視要素」であることを
+  要求するため恒久的にタイムアウトする設計になっていた(実際の本番JS
+  `onRecaptchaSuccess()`はDOM要素の`.value`を直接書き換えるだけで、
+  可視性は無関係)。`page.locator(...).evaluate((el, v) => el.value = v, token)`
+  に変更して解決(コミット`9a83e98`)、むしろ実際の本番コードの挙動に近い
+  検証方法になった。
+- 修正後`playwright-smoke.yml`を再実行し、**11/11件全合格**を確認
+  (`smoke`・`health-ping`ジョブとも成功、`notify-on-failure`はスキップ)。
+- ロゴ画像を再デザイン(暫定の角帽アイコン→ページ2枚が交差してXを形作る
+  モチーフ+暖色のアクセントドット)。ローカルPlaywrightで実ヘッダー背景上の
+  見え方を確認してからコミット(`f134436`)・実サーバーへFTP配置。運営者からの
+  評価では「本格的なデザイン」ではあるが依然としてプレースホルダーの位置づけ
+  (正式ブランディングではない)。
+
+**注意点(運営者向け、新規の問題ではない):** 上記の「happy path」スモーク
+テストは`internal-spec-testing.md`の設計通り、実行の都度**本物の通知/自動返信
+メールを送信し`contact_log.txt`に実際の行を追記する**(daily cronで毎日実行
+される)。送信元は`smoke-test@jyoho1.web.cyberhome.ne.jp`という実在しない
+ドメインのダミーアドレスなので、実際の問い合わせと区別できる設計になっている
+(意図された仕様、`internal-spec-testing.md`2.5節)。
+
+**残る運営者アクション:** 実GA4測定IDの取得のみ。Chrome拡張機能
+(claude-in-chrome)経由でのGoogle操作代行を試みたが、この環境では拡張機能が
+接続できなかった(`chrome://extensions`の有効化・claude.aiへの同アカウント
+ログイン・Chrome本体の完全再起動を試すよう運営者に案内済み)。接続できれば
+Claude Codeが画面操作を代行可能、それ以外の場合は運営者が
+`https://analytics.google.com`で発行した測定ID(`G-`で始まる文字列)を伝えれば
+即座に全8ページへ反映する。ロゴは「もっと本格的なデザインが欲しくなったら
+いつでも」という位置づけで運営者アクションのリストからは実質的に格下げ
+(必須ではない)。
+
+**これでMVPの本番稼働に必要な項目は、GA4測定ID(任意性の低い最後の1点)を
+除いてすべて完了した。**

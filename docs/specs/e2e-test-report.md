@@ -213,3 +213,162 @@ external-spec.md冒頭コメント3と同一。現在(2026年)より未来の日
 
 以降の残タスク一覧(実機依存でこの環境では検証不能な項目)は
 `docs/PROJECT_STATUS.md`チェックポイント18・21を参照。
+
+---
+
+## 再テスト: 2026-08-02(フェーズ6差し戻し対応完了後の再判定)
+
+### 目的・スコープ
+
+`docs/PROJECT_STATUS.md`チェックポイント23(コミット`314ce77`/`7491084`)で報告された
+「発見した問題1(ブロッキング)・2(GA4)・3(ロゴ)を修正した」という自己申告を、
+修正を担当したフェーズ6実装エージェントとは独立に、p8-e2e-testerとして再検証する
+(システムテストのフェーズ7再実施と同一の方針)。修正がタッチした`site/js/chat-widget.js`・
+`site/js/contact-form.js`・全8ページのHTML(`<head>`のGA4スニペット・ヘッダーのロゴ)を
+中心に再確認し、それ以外の既合格シナリオ(#1・2・4・7・8・9・12〜16)は今回の変更で
+影響を受けにくいため全面的なやり直しはせず、既存の自動テストスイートを実際に再実行して
+回帰がないことのみ確認した。
+
+### 実施内容
+
+対象環境は前回と同一(local、`site/`をPython `http.server`(非CGI)でローカル配信し、
+実際のChromium(Playwright)で操作)。フェーズ6の自己申告スクリプトをそのまま再利用せず、
+別の視点で新規にPlaywright specを書き下ろして実行した(検証後にリポジトリから削除、
+`git status`で追跡対象への副作用がないことを確認済み)。
+
+1. **シナリオ#10・#11(旧不合格)の独立再検証:** 新規に書いたPlaywright spec
+   (11ケース)で以下を確認。
+   - `contact.html`を含む全8ページ(`index.html`/`contact.html`/
+     `contact-thanks.html`/`privacy.html`/`news.html`/`qr/book1.html`/
+     `qr/book2.html`/`news.cgi`が使う`templates/header.html`+`footer.html`の
+     文字列連結を`NewsLogic.pm`同様に自前で再現した合成ページ)で、
+     コンソールエラー・ページエラーがいずれも0件であることを確認(**旧`SyntaxError:
+     Identifier 'VERCEL_API_BASE_URL' has already been declared`は再現しなかった**)。
+   - `contact.html`で`typeof window.onRecaptchaSuccess === 'function'`・
+     `typeof window.onRecaptchaExpired === 'function'`を確認(旧報告の`undefined`から
+     復旧)。
+   - `chat-widget.js`のFAQトグルボタン(`#faq-widget-toggle`)が同一ページ上に
+     引き続き存在することを確認(スコープ衝突修正によるFAQウィジェット側の回帰なし)。
+   - **実フロー模擬(フェーズ6の自己申告とは別に自作した検証):**
+     `page.route()`で`POST /api/verify-recaptcha`のみをモックし(reCAPTCHA本体・
+     実Vercelは依然この環境に存在しないため代替不能)、実際に
+     `window.onRecaptchaSuccess('fake-response')`を呼び出したところ、
+     `verify_token`隠しフィールドにモックトークンが設定され、**送信ボタンの
+     `disabled`が実際に解除される**ことを確認した。これはreCAPTCHAウィジェットの
+     `data-callback`から実際のUIボタン有効化までの配線全体を検証するものであり、
+     関数の存在確認だけに留まらない。`data-expired-callback`
+     (`onRecaptchaExpired`)を呼ぶと`verify_token`が空になり送信ボタンが
+     再度disabledに戻ることも確認した。
+   - 検証API失敗時(400/`verified:false`をモック)は、送信ボタンがdisabledのまま
+     保たれ、確定文言「検証に失敗しました。もう一度チェックボックスを操作するか、
+     時間をおいて再度お試しください。」が`#recaptcha-error`に表示されることを確認
+     (この経路も旧報告のスコープ衝突により機能していなかった)。
+   - バリデーションエラー時の再描画UXは、`contact.cgi`が実際に埋め込む
+     `<!--VALUE:xxx-->`置換済みマークアップを`page.route()`で模した`contact.html`
+     応答を読み込ませ、姓・名・メール・メール確認用・本文の**5フィールドすべて**が
+     可視の`<input>`/`<textarea>`へ正しく復元され、`.value-holder`要素が0件に
+     なる(JSによる後片付けが実行された証跡)ことを確認した(旧報告の「入力内容が
+     消えたように見える」症状の解消)。
+   - **結果: 11/11件合格。** 旧報告シナリオ#10・#11はいずれも合格に判定変更する。
+
+2. **シナリオ#5(GA4)・#3(ロゴ)の独立再検証:** 上記と同じ8ページ(7静的ページ+
+   `news.cgi`合成ページ)で`script[src*="googletagmanager.com/gtag/js"]`の存在、
+   `window.dataLayer`への`push`実行、`img.logo-image`の可視性(`getBoundingClientRect`
+   で幅・高さとも0でないこと)をそれぞれ確認した。**8ページ全てで合格。**
+   `grep`による静的確認でも、`qr/book1.html`・`qr/book2.html`を含む全8箇所の
+   ソースに`googletagmanager.com/gtag/js`・`logo-placeholder.svg`参照が存在することを
+   裏取りした。実測定ID・実ロゴアセットはチェックポイント23の記録通り引き続き
+   TODOプレースホルダーのままであり(`G-XXXXXXXXXX`、`logo-placeholder.svg`は
+   プレースホルダー画像)、これは既知の非ブロッキング事項として変わらず記録する。
+
+3. **確定済み合格シナリオの回帰スポットチェック:**
+   - シナリオ#7・#8(FAQ空状態・取得失敗UX)を、`chat-widget.js`がIIFEで包まれた後の
+     版に対して独自に新規specを書いて再実行し、いずれも文言・導線とも旧報告通り
+     動作することを確認(**回帰なし**)。
+   - シナリオ#6(全ページ共通ウィジェット、`qr/book1.html`・`book2.html`のみ未搭載)は
+     `grep`で状態が変化していないことを確認(既知の非ブロッキングギャップのまま、
+     新たな退行はなし)。
+   - シナリオ#12(HMAC 300秒期限切れUX)は`site/cgi-bin/lib/ContactLogic.pm`・
+     `contact.cgi`いずれも本修正で変更されていないため全面的な再実行はせず、
+     関連する既存Perl単体テスト(`ContactLogic.t`の期限切れ境界値テスト2件)が
+     引き続き成功していることのみ確認した(**回帰なし**)。
+   - シナリオ#14〜16(Basic認証・ダウンロード・news.cgi 0件表示)は今回変更対象外の
+     `.htaccess`・`DownloadLogic.pm`・`NewsLogic.pm`のいずれにも変更がないことを
+     `git diff`で確認し、既存の実行不能制約(この環境ではApache/CGI実行が原理的に
+     不可能)も変化がないことを確認した。
+
+4. **既存自動テストスイートのフル回帰実行(実際にこの場で再実行、フェーズ6の
+   自己申告値の丸写しではない):**
+   - Perl Test::More: `site/cgi-bin/lib/t/*.t`5ファイルを個別に`perl`実行し、
+     TAPの`ok`行を実際に集計。**72/72件成功**(`Common.t`14・
+     `ContactCgiUtf8Boundary.t`5・`ContactLogic.t`27・`DownloadLogic.t`19・
+     `NewsLogic.t`7)。フェーズ6自己申告値と一致。
+   - pytest: `api`配下で`python -m pytest tests -v`。**31/31件成功**。
+     フェーズ6自己申告値と一致。
+   - pytest(FAQ検証スクリプト、無変更だが念のため): `python -m pytest scripts/tests -v`。
+     **50/50件成功**。
+   - `node --check site/js/chat-widget.js`・`node --check site/js/contact-form.js`:
+     いずれも構文エラーなし。
+   - Playwright既存スイート(`tests/e2e/public`、`SITE_BASE_URL=http://localhost:8123/`):
+     **3 passed / 6 failed / 2 skipped**。フェーズ6自己申告値と完全に一致する内訳
+     (合格3件=`top-page`/`contact-page`/`privacy-page`、失敗6件はいずれも
+     この開発環境固有の既知制約(Python `http.server`がBasic認証・`.cgi`実行を
+     サポートしない、`VERCEL_API_BASE_URL`が実在しないプレースホルダーのまま)による
+     もので、本修正による新規リグレッションではないことを個別のエラーメッセージで
+     再確認した)。
+
+### 結果(追加・更新分)
+
+| # | シナリオ | 判定(今回) | 備考 |
+|---|----------|------------|------|
+| 10 | reCAPTCHA完了→検証トークン取得→送信ボタン有効化 | **合格(旧: 不合格)** | `onRecaptchaSuccess`が実際に呼び出し可能、モック検証成功で送信ボタンが実際に有効化されることを確認。旧`SyntaxError`は再現しない |
+| 11 | バリデーションエラー時の入力値保持再表示 | **合格(旧: 不合格)** | 5フィールド全てが可視入力欄へ復元、`.value-holder`が正しく除去されることを確認 |
+| 5 | GA4トラッキングタグ | **合格(旧: 不合格)** | 全8ページで`gtag.js`読み込み・`dataLayer.push`実行を確認。実測定IDは引き続きTODOプレースホルダー(非ブロッキングとして記録) |
+| 3 | ロゴ画像の一元管理 | **合格(旧: 未実装)** | 全8ページで`logo-placeholder.svg`参照・可視表示を確認。実アセットは引き続きプレースホルダー(非ブロッキングとして記録) |
+| 6 | FAQウィジェット全ページ共通設置 | 合格(一部ページに限り注記、変化なし) | `qr/book1.html`・`book2.html`は引き続き未搭載(既知の非ブロッキングギャップ、新規退行なし) |
+| 7 | FAQ 0件時の空状態UX | 合格(回帰なし) | 独自specで再実行し合格 |
+| 8 | FAQ取得失敗時のフォールバック文言 | 合格(回帰なし) | 独自specで再実行し合格 |
+| 12 | HMAC 300秒期限切れUX | 合格(回帰なし) | `ContactLogic.pm`無変更のため既存Perlテストの継続成功で確認 |
+
+### 発見した問題(再テスト時点)
+
+なし。フェーズ6差し戻し対応で報告された「発見した問題1」(`contact.html`スクリプト
+競合)・「発見した問題2」(GA4未実装)・「発見した問題3」(ロゴ未実装)は、いずれも
+独立した再検証(自己申告のテストの丸写しではなく、別の視点で新規に書いたPlaywright
+specによる実ブラウザでの確認、モックAPIを使った実フロー配線の裏取り、既存自動テスト
+スイートの実際の再実行)によって解消されていることを確認した。新たな問題は見つからな
+かった。
+
+**引き続き非ブロッキングとして記録する既知事項(変化なし、フェーズ9前に運営者確認を
+推奨):**
+- `VERCEL_API_BASE_URL`・reCAPTCHA v2サイトキー・GA4測定IDが引き続きTODO
+  プレースホルダーのまま(実インフラ確定待ち)。
+- ロゴ画像は引き続きプレースホルダーSVG(実アセット入手待ち)。
+- `qr/book1.html`・`book2.html`にFAQウィジェット未搭載。
+- チェックポイント23で新たに発覚した、リポジトリ直下の未追跡レガシーファイル群
+  (`index.html`・`README.md`・`dist-release/`・`src/`・`public/`・`package.json`等、
+  実際のGA4測定ID`G-EG1WMDPTV0`等を含む別デザインのVite製ランディングページ)は、
+  `site/`配下の本番相当構成とは独立した未追跡ファイルであり、本再テストの対象
+  (`site/`配下)には含まれない。誤って本番相当として参照・デプロイされるリスクが
+  あるため、削除してよいか運営者に確認することを改めて推奨する(フェーズ9着手前)。
+- Apache実機・実CGI実行・実sendmail・実reCAPTCHA本番キーに依存する検証は、
+  この開発環境では引き続き実施不能(既知のインフラ制約、状態変化なし)。
+
+### 判定(更新、2026-08-02再テスト): 合格
+
+「発見した問題1」(reCAPTCHA連携・エラー時再描画を機能停止させていた、
+`contact.html`上の2つの`<script>`タグ間のグローバルスコープ衝突)は、実際に
+`chat-widget.js`・`contact-form.js`をIIFEで包む修正により解消されたことを、
+修正担当者の自己申告とは独立の新規Playwrightテスト(実ブラウザでのコンソール
+エラー確認・`onRecaptchaSuccess`呼び出し可否確認・モックAPIによる送信ボタン
+実有効化確認・バリデーションエラー再描画の全フィールド復元確認)で実証した。
+「発見した問題2」(GA4)・「発見した問題3」(ロゴ)も、全8ページで確認し解消を
+確認した。それ以外の既存合格シナリオ(FAQ空状態・失敗時UX、HMAC期限切れUX等)にも
+回帰がないことを、既存自動テストスイート(Perl 72/72、pytest 31/31、
+Playwright 3 passed/6 known-environment-limitation failures/2 skipped)の実際の
+再実行で確認した。
+
+**フェーズ9(最終レビュー)に進めることを推奨する。** 上記「引き続き非ブロッキング
+として記録する既知事項」(実インフラ確定待ちのプレースホルダー4件、未追跡レガシー
+ファイル群の扱い、実機依存で検証不能な項目)は、フェーズ9着手前に運営者へ状況共有
+することを推奨するが、いずれもフェーズ8再合格の妨げにはならない。

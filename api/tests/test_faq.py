@@ -1,10 +1,9 @@
 import json
 
 import pytest
-from pydantic import ValidationError
-
 from app.models.faq import FaqFile, FaqFileItem
 from app.services import faq_service
+from pydantic import ValidationError
 
 BOOK = "書籍について"
 WORK = "仕事の相談"

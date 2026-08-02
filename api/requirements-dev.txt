@@ -2,4 +2,4 @@ pytest
 pytest-asyncio
 httpx
 respx
-ruff
+ruff==0.16.1

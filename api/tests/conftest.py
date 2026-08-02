@@ -14,12 +14,11 @@ os.environ.setdefault("SMOKE_TEST_SECRET", "test-smoke-secret")
 os.environ.setdefault("RECAPTCHA_TEST_SECRET_KEY", "test-recaptcha-test-key")
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.core.config import get_settings
 from app.main import app
 from app.middleware import rate_limit
 from app.services import faq_service
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture()

@@ -1168,3 +1168,80 @@ p7-system-testerが別途実施するものであり、本チェックポイン�
 実機依存の残タスク(特にPlaywright残り5シナリオを実行可能にするCyberhome/Vercelの
 実デプロイ・GitHub Secrets登録)のうち運営者が対応可能なものを進めておくとフェーズ8が
 実施しやすくなる。また、ルート直下に出現した未追跡ファイル群の扱いも確認すること。
+
+## 2026-08-02: チェックポイント22 — フェーズ8(E2Eテスト)実施、不合格判定
+
+`docs/specs/external-spec.md`(承認版)の「1. ホームページ仕様」「2. 問い合わせ
+チャット機能」「3. コンテンツダウンロード」の各要件から受け入れシナリオを作成し、
+実際にシステムを外部から動かして検証した(実装コードの読み合わせだけに頼らない)。
+詳細・全シナリオの結果・発見した問題は`docs/specs/e2e-test-report.md`を参照。
+
+- **実施したこと:**
+  - `site/`をPython `http.server`(非CGI)でローカル配信し、実際のChromium
+    (Playwright)で`tests/e2e/public/`のうち静的ページのみに依存する3ケース
+    (`top-page`/`contact-page`/`privacy-page`)を再実行し、回帰なし(3/3合格)を
+    確認した。
+  - `api/app/main.py`を実際に`uvicorn`で起動し、`chat-widget.js`のハードコード
+    済みプレースホルダーURL宛のfetchをPlaywrightの`page.route`でこの実uvicorn
+    インスタンスへ中継する方式で、実ブラウザ+実FastAPIコードによるFAQウィジェット
+    の空状態UX・ネットワーク失敗時UXを新規に検証し、いずれも合格を確認した
+    (Phase 2非ブロッキングコメント2・フェーズ5非ブロッキングコメント4相当の
+    「フェーズ8で確認すべき」項目の一部を解消)。
+  - `recaptcha_service._issue_token()`と同一アルゴリズムで意図的に400秒経過させた
+    HMACトークンを生成し、実際の`site/cgi-bin/contact.cgi`(子プロセス、Phase 6/7
+    と同じCGI.pmスタブ手法)に実POSTし、300秒期限切れ時のUX(生の500ではなく
+    契約通りのエラー再描画)を確認した(フェーズ5非ブロッキングコメント4の解消)。
+  - `news.cgi`(0記事)を実際に子プロセス実行し、Phase 7の結果に回帰がないことを
+    再確認した。
+  - **新規に実機確認した技術的事実:** Windows上のPython `http.server --cgi`は
+    `os.fork()`非搭載環境では`subprocess.Popen`で`.cgi`を直接`CreateProcess`
+    しようとして`WinError 193`で必ず失敗することを確認した。この環境では
+    「ブラウザから実際にCGIを叩く」構成が原理的に不可能であることが明確になった
+    (Apache Basic認証・`news.spec.ts`/`basic-auth.spec.ts`の実行は引き続き
+    Cyberhome実機待ち)。
+  - 検証用に作成した一時ファイル(`site/conf/hmac_secret.txt`、ad-hocの
+    Playwright specファイル・HTMLフィクスチャ)はすべてテスト後に削除し、
+    `git status`で追跡対象への副作用がないことを確認した。
+- **不合格と判定した重大な発見:** `site/contact.html`が`chat-widget.js`と
+  `contact-form.js`の両方を`<script src="...">`で読み込んでおり、両ファイルとも
+  トップレベルで`const VERCEL_API_BASE_URL = '...'`を宣言しているため、実際の
+  ブラウザで`SyntaxError: Identifier 'VERCEL_API_BASE_URL' has already been
+  declared`が発生し、**`contact-form.js`全体が一切実行されない**。実際に
+  ブラウザのconsoleで`typeof window.onRecaptchaSuccess`が`undefined`である
+  ことを確認した。影響: (1) reCAPTCHA完了時のコールバックが存在しないため、
+  実際のユーザーがreCAPTCHAを解いても送信ボタンが永久に有効化されない
+  (=問い合わせフォームが事実上送信不能)、(2) バリデーションエラー時に
+  `contact.cgi`が埋め込む値が可視の`<input>`へ復元されない(ユーザーには入力内容が
+  消えたように見える)、(3) メールアドレス確認欄のリアルタイム一致チェックも
+  動作しない。`contact.html`だけが両ファイルを同時に読み込む唯一のページである
+  ため、影響範囲はこのページに限定される(FAQウィジェット自体・他ページは無事)。
+  既存の単体テスト・システムテスト・Playwrightスモークテスト(シナリオ#4)の
+  いずれも、実際の`onRecaptchaSuccess`呼び出し可否を検証しない構造になっていた
+  ため、これまで検出されていなかった。
+- **その他の発見(中程度〜軽微、非ブロッキング扱いだがフェーズ9前に方針決定を推奨):**
+  1. external-spec.md「GA4導入済み・継続利用」・architecture.md決定事項T4にも
+     かかわらず、全ページに`gtag.js`等のGA4トラッキングタグが1つも実装されていない
+     (`privacy.html`に説明文のみあり、実タグなし)。内部仕様6文書のいずれにも
+     担当タスクの記載がなく、フェーズ4/6を通じての担当漏れと判断する。
+  2. external-spec.md「ロゴ画像は1箇所の元データを更新すると全箇所に反映される
+     構成にすること」にもかかわらず、`site/`配下に画像アセットが1枚も存在せず、
+     各ページ個別のテキスト`<h1>FroEduX</h1>`のみで実装されている。
+     `VERCEL_API_BASE_URL`等と異なりTODO記録が一切残っていない。
+  3. (参考・既知)`site/qr/book1.html`・`book2.html`のFAQウィジェット未搭載、
+     Apache Basic認証・実CGI実行の検証不能、Vercel/reCAPTCHA実値未設定、
+     設立年2030年の対外表記、はいずれも状態に変化なし(既知のまま)。
+- **合否判定に含めなかったもの:** 実インフラが存在しないための検証不能項目
+  (Apache Basic認証・実sendmail送信・実Google reCAPTCHA・実FTPSデプロイ)は、
+  新たな不合格理由には含めていない(`architecture.md`追加質問3〜6と同一)。
+
+**判定: 不合格(要修正)。** `contact.html`の`contact-form.js`実行停止バグ
+(発見した問題1)をフェーズ6へ差し戻し、修正後に実際のブラウザで
+`onRecaptchaSuccess`呼び出し可否・バリデーションエラー時の入力値復元を再確認した
+上で、本フェーズを再実施すること。GA4未実装・ロゴ画像未実装(発見した問題2・3)は
+フェーズ8再実施の必須条件ではないが、フェーズ9(最終レビュー)着手前に運営者と
+方針を確認することを推奨する。
+
+**次のアクション:** フェーズ6の担当範囲へ`contact.html`のスクリプト競合修正を
+差し戻す。修正完了後、`docs/specs/e2e-test-report.md`のシナリオ10・11(reCAPTCHA
+連携・エラー時再描画)を実際のブラウザで再テストし、合格判定を得てからフェーズ9
+(最終レビュー)へ進むこと。**フェーズ9はまだ着手できない。**

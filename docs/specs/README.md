@@ -2,10 +2,46 @@
 
 ## 🔴 再開時に最初に読むこと(/clear後はここから)
 
-**現在地:** フェーズ1〜7が完了。フェーズ7(システムテスト)は2026-08-02に初回実施し
-「不合格(要修正)」判定→同日中にフェーズ6への差し戻し修正(`contact.cgi`の文字化け
-バグ・CORS Max-Age)完了→同日中にp7-system-testerが独立に再検証し**「合格」判定**を
-得た(下記参照)。**次に着手すべきはフェーズ8(E2Eテスト)。**
+**現在地:** フェーズ1〜8に着手済み。フェーズ7(システムテスト)は合格したが、
+フェーズ8(E2Eテスト)を2026-08-02に実施した結果、**「不合格(要修正)」判定**と
+なった。`site/contact.html`で`chat-widget.js`と`contact-form.js`の
+`const VERCEL_API_BASE_URL`重複宣言によるSyntaxErrorが発生し、
+`contact-form.js`全体(reCAPTCHA連携・バリデーションエラー時の入力値復元・
+メール確認欄のリアルタイムチェック)が実行不能になっている(詳細は
+[e2e-test-report.md](e2e-test-report.md)、`docs/PROJECT_STATUS.md`
+チェックポイント22を参照)。**次に着手すべきはフェーズ6への差し戻し対応
+(スクリプト競合の解消)。フェーズ9(最終レビュー)にはまだ進めない。**
+
+**2026-08-02フェーズ8(E2Eテスト)実施・不合格判定:**
+external-spec.md(承認版)の3セクションから受け入れシナリオを作成し、実際に
+ブラウザ(Playwright/Chromium)・実際にローカル起動したFastAPI(uvicorn)・
+実際に子プロセス実行したPerl CGIを組み合わせて検証した。
+- **重大な発見:** `contact.html`が`chat-widget.js`・`contact-form.js`の両方を
+  読み込んでおり、両ファイルとも`const VERCEL_API_BASE_URL`をトップレベルで
+  重複宣言しているため、実ブラウザで`SyntaxError`が発生し`contact-form.js`が
+  一切実行されない。`onRecaptchaSuccess`が未定義になり、**実際のユーザーは
+  reCAPTCHAを解いても送信ボタンが永久に有効化されず、問い合わせフォームを
+  送信できない。** バリデーションエラー時の入力値復元・メール確認欄の
+  リアルタイムチェックも同時に機能しない。既存の単体テスト・システムテスト・
+  Playwrightスモークテストのいずれも、この不具合を検出できる構造になっていな
+  かった(実際に複数JSファイルを1ページで読み込んだ状態を実ブラウザで操作して
+  初めて発見できた)。
+- **合格した項目:** トップページ表示・レスポンシブ対応・FAQウィジェットの空状態
+  UX(実際にローカルuvicornへ中継して確認)・ネットワーク失敗時UX・お問い合わせ
+  フォームの必須項目/初期状態・reCAPTCHA/HMACトークン300秒期限切れ時のサーバー側
+  UX(実際に期限切れトークンを生成し`contact.cgi`へ実POSTして確認)・
+  `news.cgi`0件表示、など。
+- **中程度の追加発見(非ブロッキング、フェーズ9前に方針確認推奨):** external-spec.md
+  確定要件であるGA4トラッキングタグが全ページに未実装、ロゴ画像アセットが
+  1枚も実装されていない(いずれも内部仕様・実装のいずれのフェーズでも担当タスク
+  として記録されないまま見過ごされていた)。
+- **新規に実機確認した技術的事実:** Windows上のPython `http.server --cgi`は
+  `os.fork()`非搭載環境のため`.cgi`実行時に必ず`WinError 193`で失敗する
+  (`subprocess.Popen`が`.cgi`ファイルを直接`CreateProcess`しようとするため)。
+  この環境では「ブラウザから実際にCGIを叩く」構成は原理的に不可能であることが
+  判明した(今後同じアプローチを再試行する必要はない)。
+- 詳細は[e2e-test-report.md](e2e-test-report.md)、`docs/PROJECT_STATUS.md`
+  チェックポイント22を参照。
 
 **2026-08-02フェーズ7(システムテスト)再実施・合格判定:**
 チェックポイント20の自己申告(修正した本人による「直った」という報告)を鵜呑みにせず、
@@ -177,24 +213,29 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 全ドキュメントへ反映済み。
 
 **次回再開時に最初にやること:**
-1. **フェーズ8(p8-e2e-tester、E2Eテスト)に着手する。** フェーズ7(システムテスト)は
-   2026-08-02に合格判定済み(初回不合格→フェーズ6差し戻し修正→独立再検証で合格、
-   `docs/PROJECT_STATUS.md`チェックポイント19〜21・`system-test-report.md`参照)。
-   `docs/PROJECT_STATUS.md`チェックポイント18の残タスク一覧(特に1・7・8:
-   Vercel/reCAPTCHA実値、GitHub Secrets、Cyberhome非公開ファイルの実配置)のうち
-   運営者が対応可能なものを先に進めておくと、フェーズ8で実機に対するテストが
-   実施しやすくなる。
-2. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
+1. **フェーズ6への差し戻し対応(`site/contact.html`のスクリプト競合解消)を行う。**
+   フェーズ8(E2Eテスト)が2026-08-02に不合格判定(`chat-widget.js`・
+   `contact-form.js`双方の`const VERCEL_API_BASE_URL`重複宣言による
+   SyntaxErrorで`contact-form.js`が実行不能、reCAPTCHA連携・バリデーション
+   エラー時の入力値復元が機能しない)。詳細・推奨修正方針は
+   `docs/specs/e2e-test-report.md`「発見した問題1」、`docs/PROJECT_STATUS.md`
+   チェックポイント22を参照。修正後は実際のブラウザで
+   `onRecaptchaSuccess`呼び出し可否・入力値復元を確認し、フェーズ8を再実施
+   すること。**フェーズ9(最終レビュー)にはまだ進めない。**
+2. (非ブロッキング、フェーズ9前に方針確認推奨)GA4トラッキングタグ未実装・
+   ロゴ画像アセット未実装(`e2e-test-report.md`「発見した問題2・3」)への
+   対応方針を運営者と確認する。
+3. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
    詳細・実機確認事項)はフェーズ8以降と並行して確認する。
-3. (非ブロッキング、次回内部仕様改訂時に整理)`internal-spec-cyberhome.md`は
+4. (非ブロッキング、次回内部仕様改訂時に整理)`internal-spec-cyberhome.md`は
    `download.cgi`/`news.cgi`にも防御的に`$CGI::PARAM_UTF8 = 1;`を設定すべきかを
    明記していない。現状は両CGIとも英数字のみのバリデーションのため実害はないが、
    将来日本語入力パラメータが追加された際の再発防止として方針を明記することを推奨する。
-4. (非ブロッキング)フェーズ7再テスト中に、リポジトリのルート直下に
-   `README.md`・`index.html`・`dist-release/`・`src/`・`public/`等のOneDrive同期由来と
-   思われる未追跡ファイルが出現していることに気づいた(`docs/PROJECT_STATUS.md`
-   チェックポイント21参照)。git管理下にはないため今回のテスト結果には影響していないが、
-   次回作業時に運営者が原因・要否を確認することを推奨する。
+5. (非ブロッキング)リポジトリのルート直下に、`README.md`・`index.html`・
+   `dist-release/`・`src/`・`public/`等のOneDrive同期由来と思われる未追跡
+   ファイルが引き続き存在する(`docs/PROJECT_STATUS.md`チェックポイント21参照)。
+   git管理下にはないため今回のテスト結果には影響していないが、次回作業時に
+   運営者が原因・要否を確認することを推奨する。
 
 **完了済み:**
 1. `git push` は `gh auth setup-git` でGCMの詰まりを回避し、完了済み(`origin/main` = `0f6c50c`)。
@@ -327,35 +368,62 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
     詳細は`docs/PROJECT_STATUS.md`チェックポイント21、`system-test-report.md`の
     「再テスト: 2026-08-02」節を参照。
 
-**残タスク(フェーズ8以降が参照すべき一覧、詳細は`docs/PROJECT_STATUS.md`
-チェックポイント18・21を参照):**
-20. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ8以降と並行して確認する。
-21. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
+20. **フェーズ8(E2Eテスト)実施・不合格判定(2026-08-02):** external-spec.mdの
+    3セクションから受け入れシナリオを作成し、実ブラウザ(Playwright/Chromium)・
+    実際にローカル起動したFastAPI(uvicorn)・実際に子プロセス実行したPerl CGIを
+    組み合わせて検証した。`contact.html`が`chat-widget.js`・`contact-form.js`の
+    両方を読み込んでおり、両ファイルとも`const VERCEL_API_BASE_URL`をトップレベルで
+    重複宣言しているため実ブラウザで`SyntaxError`が発生し、`contact-form.js`全体
+    (reCAPTCHA連携・バリデーションエラー時の入力値復元・メール確認欄の
+    リアルタイムチェック)が実行不能であることを発見した。FAQウィジェットの空状態
+    UX・ネットワーク失敗時UX(実際にローカルuvicornへ中継して確認)、reCAPTCHA/HMAC
+    トークン300秒期限切れ時のサーバー側UX(実際に期限切れトークンを生成して
+    `contact.cgi`へ実POST)は合格。GA4トラッキングタグ未実装・ロゴ画像アセット
+    未実装も新たに発見した(いずれも非ブロッキング)。**判定: 不合格。フェーズ6へ
+    差し戻し。フェーズ9にはまだ進めない。** 詳細は
+    [e2e-test-report.md](e2e-test-report.md)、`docs/PROJECT_STATUS.md`
+    チェックポイント22を参照。
+
+**残タスク(フェーズ6の差し戻し対応・フェーズ8以降が参照すべき一覧、詳細は
+`docs/PROJECT_STATUS.md`チェックポイント18・21・22を参照):**
+21. **【最優先】`site/contact.html`のスクリプト競合(`contact-form.js`実行不能)を
+    修正する。** `e2e-test-report.md`「発見した問題1」参照。修正後、実ブラウザでの
+    再確認+フェーズ8の再実施が必要(フェーズ9着手の前提条件)。
+22. (非ブロッキング、フェーズ9前に方針確認推奨)GA4トラッキングタグが全ページに
+    未実装(`e2e-test-report.md`「発見した問題2」)。
+23. (非ブロッキング、フェーズ9前に方針確認推奨)ロゴ画像アセットが未実装、
+    テキストロゴのみで単一ファイル参照構成も未達成(`e2e-test-report.md`
+    「発見した問題3」)。
+24. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ8以降と並行して確認する。
+25. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
     現行方針と不整合)の扱いを整理する(非ブロッキング、詳細は
     `docs/PROJECT_STATUS.md`チェックポイント13の「フェーズ4/5へのフィードバック」参照)。
-22. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
+26. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
     ダブルサブミット方式を`admin.py`ルーターとともに実装する(Task#4では
     スコープ外と判断し見送った、詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照)。
-23. `site/js/chat-widget.js`・`contact-form.js`内の`VERCEL_API_BASE_URL`、
+27. `site/js/chat-widget.js`・`contact-form.js`内の`VERCEL_API_BASE_URL`、
     `site/contact.html`のreCAPTCHA `data-sitekey`は、実機情報(Vercelデプロイ先URL・
     reCAPTCHA v2サイトキーの登録)が確定次第、プレースホルダーから実際の値に
     置き換えること(非ブロッキング、詳細は`docs/PROJECT_STATUS.md`チェックポイント17
-    参照)。
-24. `site/qr/book1.html`・`book2.html`にはFAQウィジェット(`chat-widget.js`)を
+    参照。**注記:** 実値を設定しても残タスク21のスクリプト競合バグ自体は解消しない、
+    別々の対応が必要)。
+28. `site/qr/book1.html`・`book2.html`にはFAQウィジェット(`chat-widget.js`)を
     意図的に追加していない(Task#3の既存成果物へのスコープ拡大を避けたため)。
     external-spec.mdの「全ページ共通」要件を厳密に満たすには、将来これらにも
     追加する余地がある(非ブロッキング)。
-25. Playwrightスモークテスト(`tests/e2e/public/`)のうち5ファイル
+29. Playwrightスモークテスト(`tests/e2e/public/`)のうち5ファイル
     (`news`/`basic-auth`/`faq-widget`/`vercel-faq-api`/`contact-submission`)は
     Cyberhome/Vercelの実デプロイが存在しないためこの環境では一度も実行されていない。
+    さらにフェーズ8で、Windows上のPython `http.server --cgi`では`os.fork()`非搭載の
+    ため`.cgi`実行が原理的に不可能(`WinError 193`)であることも実機確認した。
     実デプロイ後、`workflow_dispatch`で`playwright-smoke.yml`を手動実行して初回の
     実地検証を行うこと。
-26. GitHub Secrets/Variables(`CYBERHOME_FTP_*`、`SITE_BASE_URL`、
+30. GitHub Secrets/Variables(`CYBERHOME_FTP_*`、`SITE_BASE_URL`、
     `VERCEL_API_BASE_URL`、`SMOKE_TEST_SECRET`等)がこの環境では未登録であり、
     登録されるまで4本のワークフローは実行時に失敗する(構文・設計は完成済み)。
-27. GitHubブランチ保護ルール・PRベース開発フロー(`internal-spec-repo-cicd.md` 6章)
+31. GitHubブランチ保護ルール・PRベース開発フロー(`internal-spec-repo-cicd.md` 6章)
     への移行が未実施のまま(引き続きmainへの直接コミットで進めている)。
-28. (非ブロッキング)リポジトリのルート直下に出現した、git管理下にない
+32. (非ブロッキング)リポジトリのルート直下に出現した、git管理下にない
     OneDrive同期由来と思われる未追跡ファイル群(`README.md`・`index.html`・
     `dist-release/`・`src/`・`public/`等)の扱いを運営者が確認すること
     (`docs/PROJECT_STATUS.md`チェックポイント21参照)。
@@ -378,7 +446,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
 | 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | **完了(2026-08-02)**: Task#1(リポジトリ構成・CI/CD基盤)・Task#2(データモデル)・Task#3(Cyberhome側Perl CGI実装)・Task#4(Vercel/FastAPI実装)・静的ページ実装(gap-fill)・Task#5(テスト・CI/CD詳細実装)のすべてが完了。単体テスト合計148件全件成功(Perl 67 + pytest 31 + faq validator 50)。フェーズ7差し戻し対応(`contact.cgi`のUTF-8修正・CORS Max-Age修正)も完了、Perl 72件・pytest 31件全件成功 |
 | 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | **合格(2026-08-02)**: 初回不合格(contact.cgiの日本語文字化けバグ・CORS Max-Age不一致)→フェーズ6差し戻し修正→独立再検証で合格。フェーズ8着手可能 |
-| 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 着手可能(未着手) |
+| 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | **不合格(2026-08-02)**: `contact.html`のスクリプト競合により`contact-form.js`が実行不能(reCAPTCHA連携・エラー時再描画が機能しない)。フェーズ6へ差し戻し中 |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |
 | 10 | 保守メンテナンス | p10-maintainer | (継続、Issue単位で個別記録) | - |
 
@@ -393,7 +461,10 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
   フェーズ6は着手可能になった。フェーズ6は同日中にTask#1〜5すべてを完了し、
   フェーズ7(システムテスト)は着手可能な状態になった。フェーズ7は初回不合格→
   フェーズ6差し戻し修正→独立再検証で同日中に合格し、フェーズ8(E2Eテスト)は
-  着手可能な状態になった。**
+  着手可能な状態になった。フェーズ8は2026-08-02に実施した結果不合格
+  (`contact.html`のスクリプト競合による`contact-form.js`実行不能)となり、
+  フェーズ6へ差し戻し中。フェーズ6の修正・フェーズ8再実施が完了するまで
+  フェーズ9(最終レビュー)は着手しない。**
 - 各エージェントは作業開始時に必ず `docs/PROJECT_STATUS.md` と本ディレクトリの既存ファイルを
   読み、前提を引き継ぐこと。
 - **2026-08-02方針転換:** 上記のゲートルールはMVP初回リリース(フェーズ1〜9)に適用する。

@@ -23,7 +23,7 @@
     // (docs/specs/architecture.md「追加質問6」と同種の、実機確認待ちの非公開情報。
     //  未確定のままではFAQ取得が失敗するが、6.2節の失敗時UI(エラーメッセージ+
     //  問い合わせフォーム導線)により壊れた表示にはならない設計になっている。)
-    const VERCEL_API_BASE_URL = 'https://REPLACE-WITH-VERCEL-PROJECT.vercel.app';
+    const VERCEL_API_BASE_URL = 'https://api-seven-steel-73.vercel.app';
 
     const FAQ_FETCH_TIMEOUT_MS = 5000; // internal-spec-integration.md 6.2節
 

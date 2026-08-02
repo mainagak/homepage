@@ -27,7 +27,7 @@
 
     // TODO: 実際にVercelへデプロイしたプロジェクトのURLへ置き換えること
     // (chat-widget.js と同じ値。architecture.md「追加質問6」と同種の未確定値)。
-    const VERCEL_API_BASE_URL = 'https://REPLACE-WITH-VERCEL-PROJECT.vercel.app';
+    const VERCEL_API_BASE_URL = 'https://api-seven-steel-73.vercel.app';
 
     const VERIFY_RECAPTCHA_TIMEOUT_MS = 8000; // internal-spec-integration.md 6.1節
 

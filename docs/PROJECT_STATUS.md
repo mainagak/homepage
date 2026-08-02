@@ -793,3 +793,165 @@ Vercel側FastAPI実装、テスト・CI/CD詳細実装)に着手する。Vercel�
 `site/js/contact-form.js`・`site/contact.html`を修正すること。フェーズ7・8で
 実機に近い環境での動作確認(reCAPTCHA→HMAC→contact.cgiのフルフロー、FAQ
 ウィジェットの実データ表示、QRページへのウィジェット追加要否の再検討)を行うこと。
+
+## 2026-08-02: チェックポイント18 — フェーズ6 Task#5(テスト・CI/CD詳細実装、Wave3)完了、フェーズ6全体完了
+
+`docs/specs/internal-spec-testing.md`に基づき、フェーズ6の最後のタスク
+(デプロイジョブ順序の確認・Playwrightスモークテストの実ファイル・Perl/pytestの
+CI組み込み確認・バックアップ/ロールバック手順・Q4日次疎通確認のCI配線)を実施した。
+
+- **`.github/workflows/*.yml`4本の確認結果: 既に完成していた。** Task#1
+  (チェックポイント13)が`internal-spec-testing.md`の詳細設計(ジョブ順序・
+  Playwrightシナリオ表・`perl-tests.yml`/`api-tests.yml`確定設計・
+  `SMOKE_TEST_SECRET`配線・`smoke-test-failure`ラベル等)をすでに一字一句に近い
+  精度で反映済みであることを4ファイルとも全文読み合わせで確認した。
+  `deploy-cyberhome.yml`(backup→deploy→smoke-test→notify-on-failure)、
+  `playwright-smoke.yml`(schedule/workflow_call/workflow_dispatch/`api/**`push、
+  smoke+health-ping+notify-on-failure)、`api-tests.yml`、`perl-tests.yml`の
+  いずれも本書2.4節・6章の表と完全に一致しており、本タスクでの変更は不要と判断した
+  (既存ファイルは無変更のまま)。
+- **Playwright実テストファイルを新規実装(未着手だった部分):**
+  リポジトリ直下に`package.json`(devDependency `@playwright/test`のみ、
+  `architecture.md`決定事項9「ローカル開発環境を持たない」方針に沿い他のNode資産は
+  追加しない)・`playwright.config.ts`(`testDir: tests/e2e`、`SITE_BASE_URL`環境変数
+  からbaseURLを解決)を新規作成し、`tests/e2e/public/`配下に
+  `internal-spec-testing.md` 2.1節のシナリオ#1〜#10・#4bを実装する8ファイル・
+  11テストケース(`top-page.spec.ts`・`news.spec.ts`・`contact-page.spec.ts`・
+  `privacy-page.spec.ts`・`basic-auth.spec.ts`(#7/#8/#9)・`faq-widget.spec.ts`・
+  `vercel-faq-api.spec.ts`・`contact-submission.spec.ts`(#4/#4b))を新規実装した。
+  各ファイルは実装済みの実ファイル(`site/index.html`・`contact.html`・
+  `site/js/chat-widget.js`・`contact-form.js`・`ContactLogic.pm`・`contact.cgi`・
+  `.htaccess`・`api/app/routers/*.py`)を実際にgrep・読み合わせてセレクタ・
+  フィールド名・エラー文言・レスポンス形状を一次情報から確認した上で書いた
+  (spec文書の記述のみに頼っていない)。シナリオ#4(正常系送信、B′案)は
+  `internal-spec-vercel.md` 9章の設計通り、ブラウザから
+  `POST /api/verify-recaptcha`を`X-Smoke-Test-Auth`ヘッダー付きで直接呼び出して
+  `verify_token`を取得し、実際の`contact.html`フォームへ注入して送信する実装にした
+  (`contact.cgi`・reCAPTCHA検証ロジックは一切変更・迂回しない)。
+- **ローカルでの検証(実施済み、フェーズ7/8のシステムテスト・E2Eテストではない):**
+  - `npx playwright test --list`で11テスト・8ファイルすべてが構文エラーなく
+    列挙されることを確認。
+  - `tsc --noEmit --strict`(型定義は`--types node`を明示)でも型エラー0件を確認。
+  - Cyberhome実機・Vercel実機のいずれも存在しないため、`site/`をPython
+    `http.server`でローカル配信し、静的ページのみに依存する3シナリオ
+    (`top-page.spec.ts`・`contact-page.spec.ts`・`privacy-page.spec.ts`)を
+    実際にPlaywright(Chromium)で実行し、**3件とも成功**を確認した
+    (セレクタ・見出し文言が実HTMLと一致していることの実証)。
+  - 残り5ファイル(`news.spec.ts`はPerl CGI実行環境、`basic-auth.spec.ts`は
+    Apache Basic認証、`faq-widget.spec.ts`・`vercel-faq-api.spec.ts`・
+    `contact-submission.spec.ts`はVercel実デプロイが必要)はこの環境では
+    実行不可能であり、**意図的に未実行のまま**とした(タスク指示通り、
+    実デプロイ後にCI上で実行されることを想定した設計)。
+- **Perl Test::More・pytestのCI組み込み再確認:**
+  - `perl-tests.yml`は`prove -l site/cgi-bin/lib/t/`を実行する設計のまま
+    (変更なし)。ローカルではCygwin環境の`prove`本体が引き続き壊れているため
+    (チェックポイント16と同じ既知の制約)、`perl -Isite/cgi-bin/lib <test>.t`を
+    4ファイル個別実行する形で代替検証し、**67/67件成功**(Common 14/
+    ContactLogic 27/DownloadLogic 19/NewsLogic 7、失敗0件)を確認した。
+  - `api-tests.yml`は`ruff check api/` → `pytest api/tests`のまま(変更なし)。
+    実行した結果は下記「Q4疎通確認の実装状況」を参照。
+- **Q4(問い合わせフォーム自動疎通確認、B′案)の実装状況を検証:**
+  `api/app/services/recaptcha_service.py`の`_resolve_secret_key`が
+  `internal-spec-vercel.md` 9.1節のコード例通りに実装済みであること、
+  `api/app/routers/recaptcha.py`が`request.headers`を正しく
+  `verify_recaptcha()`へ渡していること、`api/app/core/config.py`に
+  `SMOKE_TEST_SECRET`・`RECAPTCHA_TEST_SECRET_KEY`が定義済みであることを
+  実コードの読み合わせで確認した(Task#4は実際にQ4を実装済みであり、
+  タスク指示にあった「未実装ならBLOCKERとして報告」には該当しなかった)。
+  `.github/workflows/playwright-smoke.yml`もCI Secrets `SMOKE_TEST_SECRET`を
+  `X-Smoke-Test-Auth`相当の環境変数として`smoke`ジョブへ既に配線済み
+  (Task#1側で対応済み、変更不要)。
+  - **発見した実装ギャップ(本タスクで解消、単体テストのバックフィル):**
+    `internal-spec-vercel.md` 6.4節の`test_recaptcha.py`テストケース表(14件)は、
+    同日に追加された9章(CI検証バイパス)を反映しないまま据え置かれており、
+    `_resolve_secret_key`の分岐(X-Smoke-Test-Authヘッダーによる
+    `RECAPTCHA_TEST_SECRET_KEY`/`RECAPTCHA_SECRET_KEY`切替)を検証するpytestケースが
+    1件も存在しないことが判明した。本タスクの役割定義(「単体テストの手戻し
+    (バックフィル)」)の範囲内と判断し、`api/tests/test_recaptcha.py`にケース15・16
+    (正しいヘッダーで`RECAPTCHA_TEST_SECRET_KEY`が送信されること/
+    ヘッダー欠落・不一致で`RECAPTCHA_SECRET_KEY`のまま送信されること、`respx`で
+    Googleへの実送信パラメータを検証)を追加し、`internal-spec-vercel.md` 6.4節にも
+    追記した(実装コード自体`_resolve_secret_key`は無変更)。これにより
+    `test_recaptcha.py`は14→16件、pytest合計は29→31件になった
+    (`internal-spec-testing.md` 4章・6章の該当箇所も29→31に修正済み)。
+    実行結果: `python -m pytest api/tests -v` → **31/31件成功**、
+    `ruff check api/app api/index.py api/tests` → **All checks passed**。
+- **バックアップ・ロールバック手順:** `internal-spec-testing.md` 5章がFTPSミラー
+  方式で既に実行可能なレベルまで具体化済みであり(`deploy-cyberhome.yml`の
+  `backup`ジョブとして実装済み、Task#1)、本タスクでの追加実装は不要と判断した。
+  CyberhomeのFTPSサーバーがLIST/MLSDに対応しているかは実機未確認のままであり
+  (5章・`internal-spec-repo-cicd.md`「追加質問Q1」が既に明記済みの制約)、
+  初回の実デプロイ実行まで検証できない(本タスクの範囲では解消不可能な既知の制約)。
+- **`.gitignore`に`package-lock.json`を追加:** `npm install -D @playwright/test`の
+  実行時に自動生成されるが、CIワークフローは`npm ci`ではなく`npm install -D`を
+  使う設計(Task#1確定)のためロックファイルはCIの動作に必須ではなく、
+  `architecture.md`決定事項9(ローカル開発環境を持たない)の精神に沿ってリポジトリには
+  含めない判断とした。`node_modules/`・`playwright-report/`・`test-results/`は
+  Task#1の時点で既に`.gitignore`済みだった。
+
+**内部仕様上のギャップ・矛盾: 1件発見・その場で解消(上記pytestケース15・16の
+バックフィル、ブロッキングではない)。** それ以外に本タスクのスコープ
+(デプロイジョブ順序・Playwrightシナリオ・Perl/pytestのCI組み込み・
+バックアップ/ロールバック・Q4疎通確認)においてブロッキングな未決定事項・
+矛盾は見つからなかった。
+
+**フェーズ6(実装・単体テスト)は本タスクをもって全体完了した。** Task#1〜4+
+静的ページ実装(gap-fill)+本タスク(Task#5)のすべてが完了し、単体テストは
+Perl Test::More 67件・pytest 31件・`scripts/validate_faq.py`用pytest 50件の
+合計148件が全件成功している(いずれもこの実装環境で実際に実行し確認済み)。
+Playwrightスモークテストのみ、実際のCyberhome/Vercelデプロイ先が存在しないため
+「コード自体は完成・部分的にローカル静的配信で検証済みだが、フルシナリオの
+実行はフェーズ7以降に持ち越し」という状態である。
+
+**残タスク・非ブロッキング項目の総括(フェーズ7・8が参照すべき一覧、詳細は各
+チェックポイント参照):**
+
+1. `VERCEL_API_BASE_URL`(`site/js/chat-widget.js`・`contact-form.js`)と
+   reCAPTCHA v2サイトキー(`site/contact.html`の`data-sitekey`)が
+   プレースホルダーのまま(チェックポイント17)。実機のVercelデプロイ・
+   `jyoho1.web.cyberhome.ne.jp`ドメインでのreCAPTCHA登録が完了次第、実値に置換する。
+2. Playwrightスモークテスト8ファイル・11ケースのうち、静的ページ3ケース
+   (`top-page`/`contact-page`/`privacy-page`)はローカル静的配信で実行・成功を
+   確認済みだが、残り5ファイル(`news`/`basic-auth`/`faq-widget`/
+   `vercel-faq-api`/`contact-submission`)はCyberhome実機(Apache Basic認証・
+   CGI実行)・Vercel実機が存在しないため**この環境では一度も実行されていない**。
+   実デプロイ後、`workflow_dispatch`での`playwright-smoke.yml`手動実行により
+   初回の実地検証を行うこと。
+3. `docs/specs/architecture.md`末尾の「追加質問」3〜6(Cyberhome契約プランの
+   正確な月額費用、文字コード/Apacheバージョンの実機確認、`AuthUserFile`絶対パス、
+   reCAPTCHAキー登録状況)は引き続き非ブロッキングのまま未解消。
+4. `site/qr/book1.html`・`book2.html`にFAQウィジェット(`chat-widget.js`)が
+   未追加(チェックポイント17)。external-spec.mdの「全ページ共通」要件を厳密に
+   満たすには追加の余地がある。
+5. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
+   ダブルサブミット方式を`admin.py`ルーターとともに実装する必要がある
+   (Task#4ではスコープ外と判断し未実装、チェックポイント15)。
+6. `scripts/setup.ps1`(Node.js前提のローカル開発セットアップ)が現行方針と
+   不整合なまま放置されている(チェックポイント13)。
+7. Cyberhomeの実FTPS認証情報・`CYBERHOME_PUBLIC_HTML_PATH`・
+   `CYBERHOME_FTP_PORT`等のGitHub Secrets、`SITE_BASE_URL`・
+   `VERCEL_API_BASE_URL`・`SMOKE_TEST_SECRET`等のGitHub Variables/Secretsは、
+   いずれもこの環境では登録されていない(登録は運営者作業、コードでは表現できない)。
+   これらが揃うまで4本のワークフローはいずれも実行時に失敗する
+   (構文・設計は完成しているが、実行可能な状態ではない)。
+8. Cyberhome実機の`.htpasswd`(`dl/`・`qr/`)・`conf/hmac_secret.txt`は
+   `.example`のみコミットされており、実ファイルはFTPで別途配置する必要がある
+   (`internal-spec-repo-cicd.md` 7.4節、既存方針のまま変更なし)。
+9. GitHubブランチ保護ルール・PRベース開発フローへの移行(`internal-spec-repo-cicd.md`
+   6章)は、この一連のフェーズ6実装作業でもまだ実施されていない(継続してmainへの
+   直接コミットで進めている)。フェーズ6完了を機に移行を検討することを推奨する。
+10. `internal-spec-vercel.md` 6.4節のpytestテスト表と実ファイルとの不整合
+    (テスト15・16の欠落)は本タスクで発見・解消済みだが、同種の「9章のような
+    後付け追加が既存節の一覧表に反映されない」というドキュメント運用上のリスクは
+    今後も起こり得るため、フェーズ9(最終レビュー)で全ドキュメントの
+    テストケース数一致を再確認することを推奨する。
+
+**この一連の検証はいずれもフェーズ6(実装・単体テスト)の範囲であり、
+システムテスト・E2Eテスト(フェーズ7・8)を構成しない。** 実際のCyberhome/Vercel
+環境に対する動作確認・reCAPTCHA本番キーでの疎通・実メール受信確認等は
+一切行っていない。
+
+**次のアクション:** フェーズ7(p7-system-tester、システムテスト)に着手可能。
+着手前に上記残タスク1・7・8(Vercel/reCAPTCHA実値・GitHub Secrets・Cyberhome
+非公開ファイル)のうち実施可能なものから運営者作業として進めることを推奨する
+(これらが揃わない限り、フェーズ7で実機に対するテストは実施できない可能性が高い)。

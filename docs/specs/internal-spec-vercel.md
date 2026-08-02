@@ -728,6 +728,15 @@ ruff
 | 12 | 短時間に規定回数を超えてアクセス | (Google呼び出し前段) | `429` |
 | 13 | `OPTIONS /api/verify-recaptcha`プリフライト | - | `204`(または`200`)+ CORSヘッダー一式 |
 | 14 | fail-open発生時のログに`recaptcha_response`の値が含まれない(`caplog`検査) | ケース6を再利用 | ログ本文に生トークン文字列が出現しない |
+| 15(2026-08-02、フェーズ6 Task#5で追加) | 正しい`X-Smoke-Test-Auth`ヘッダー付きリクエスト | 200 `{"success": true, ...}`(Googleへ送信された`secret`パラメータを検証) | `200` + `verified: true` + Googleへ送信された`secret`が`RECAPTCHA_TEST_SECRET_KEY`と一致 |
+| 16(同上) | `X-Smoke-Test-Auth`ヘッダーが欠落/不一致のリクエスト | 同上 | `200` + Googleへ送信された`secret`が`RECAPTCHA_SECRET_KEY`(本番)と一致 |
+
+**2026-08-02追記(フェーズ6 Task#5):** 9章の`_resolve_secret_key`分岐は
+`api/app/services/recaptcha_service.py`に実装済みだったが、9章追加時(同日)に本節の
+テスト表が更新されておらず、対応するpytestケースが1件も存在しないギャップが
+フェーズ6テスト実装タスクのレビューで発覚した。上記15・16としてテストを追加し
+(`api/tests/test_recaptcha.py`)、`test_recaptcha.py`は14件から16件、pytest合計は
+29件から31件になった。実装コード自体(`_resolve_secret_key`)に変更はない。
 
 ### 6.5 `test_health.py`
 

@@ -469,8 +469,10 @@ jobs:
 ## 4. Python `pytest` のCI実行タイミング
 
 `internal-spec-vercel.md` 6章が確定したテストケース一覧(`test_faq.py`12件、
-`test_recaptcha.py`14件、`test_health.py`3件、計29件)を前提に、CI全体における
-実行タイミングを整理する。
+`test_recaptcha.py`16件、`test_health.py`3件、計31件。2026-08-02、フェーズ6
+Task#5にて9章のCI検証バイパス分岐に対応するテスト2件を追加、詳細は
+`internal-spec-vercel.md` 6.4節参照)を前提に、CI全体における実行タイミングを
+整理する。
 
 ### 4.1 `api-tests.yml`(`internal-spec-repo-cicd.md` 3.3節、変更なし)
 
@@ -618,7 +620,7 @@ Python単体テスト→デプロイ→E2Eスモークテスト」という順�
 | # | タイミング/トリガー | 実行されるワークフロー | 実行される検証 | ゲート性 |
 |---|---|---|---|---|
 | 1 | PR作成・更新(`site/cgi-bin/**`変更あり) | `perl-tests.yml` | Test::More 約67ケース(3.1節) | 参考(必須チェックではない、レビューで確認) |
-| 2 | PR作成・更新(`api/**`変更あり) | `api-tests.yml` | `ruff check` + pytest 29ケース | 参考(同上) |
+| 2 | PR作成・更新(`api/**`変更あり) | `api-tests.yml` | `ruff check` + pytest 31ケース | 参考(同上) |
 | 3 | PR作成・更新(`api/**`変更あり) | Vercel Preview Deploy(GitHub連携、Actions外) | プレビューURL自動生成、Neonプレビューブランチ自動作成 | 参考 |
 | 4 | PRをsquash mergeしてmainへpush(`site/**`変更あり) | `deploy-cyberhome.yml` | `backup`→FTPSデプロイ→`smoke-test`(2.1節#1〜10)→(失敗時)Issue自動作成 | **必須**(smoke-test失敗=ワークフロー失敗、ラウンド1 G45=A) |
 | 5 | 同上、mainへpush(`api/**`変更あり) | `api-tests.yml`(push再実行)+ Vercel本番自動デプロイ(Actions外)+ `playwright-smoke.yml`(4.3節の新設`push`トリガー) | pytest再実行 + `/health`安定待ち後に公開サイトスイート+health-ping | 参考+間接的な検知(失敗でIssue化) |

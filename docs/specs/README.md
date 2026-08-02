@@ -2,9 +2,21 @@
 
 ## 🔴 再開時に最初に読むこと(/clear後はここから)
 
-**現在地:** フェーズ1〜5(外部仕様調査・レビュー承認・アーキテクチャー調査・内部仕様調査・
-内部仕様最終レビュー)が完了。`docs/specs/internal-spec.md`は2026-08-02に**承認**され、
-フェーズ6(実装・単体テスト)へ着手可能な状態になった。**
+**現在地:** フェーズ1〜6(外部仕様調査・レビュー承認・アーキテクチャー調査・内部仕様調査・
+内部仕様最終レビュー・実装/単体テスト)が完了。**フェーズ6は2026-08-02にTask#5
+(テスト・CI/CD詳細実装)の完了をもって全体完了し、フェーズ7(システムテスト)へ
+着手可能な状態になった。**
+
+**2026-08-02フェーズ6 Task#5(テスト・CI/CD詳細実装、Wave3)完了・フェーズ6全体完了:**
+`internal-spec-testing.md`に基づき、Playwright実テストファイル8ファイル・11ケース
+(`tests/e2e/public/`、2.1節シナリオ#1〜#10・#4b)を新規実装した(`.github/workflows/`
+4本はTask#1が既に本書の詳細設計通りに完成させており変更不要だった)。静的ページのみに
+依存する3ケースはローカルのPython簡易サーバーで実行し成功を確認、残り5ケースは
+Cyberhome/Vercel実機が存在しないためこの環境では未実行。Q4(日次疎通確認の
+CI検証バイパス)は`api/app/services/recaptcha_service.py`の`_resolve_secret_key`が
+既に実装済みであることを確認したが、対応するpytestケースが存在しないギャップを発見し
+`api/tests/test_recaptcha.py`に2件追加(pytest合計29→31件)。Perl 67件・pytest 31件
+全て成功。残タスク一覧は`docs/PROJECT_STATUS.md`チェックポイント18を参照。
 
 **2026-08-02フェーズ6 静的ページ実装(gap-fill)完了:** Task#1(リポジトリ構成)・
 Task#3(Cyberhome側CGI)のいずれも「ページ内容・コピー自体はスコープ外」と判断して
@@ -102,13 +114,12 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 全ドキュメントへ反映済み。
 
 **次回再開時に最初にやること:**
-1. フェーズ6(p6-implementer、実装・単体テスト)に着手する。`docs/specs/internal-spec.md`
-   冒頭の非ブロッキングコメント1〜3(環境変数名の統一、レート制限記述の出典表現修正、
-   CSRF記述の技術的訂正)を実装の早い段階で解消しつつ、本書4章の依存関係(データモデル・
-   連携契約・リポジトリ構成が土台→Cyberhome側/Vercel側が並行実装可→テスト・CI/CDが
-   最後)に沿って実装を進める。
+1. フェーズ7(p7-system-tester、システムテスト)に着手する。`docs/PROJECT_STATUS.md`
+   チェックポイント18の残タスク一覧(特に1・7・8: Vercel/reCAPTCHA実値、GitHub
+   Secrets、Cyberhome非公開ファイルの実配置)のうち運営者が対応可能なものを先に
+   進めておくと、フェーズ7で実機に対するテストが実施しやすくなる。
 2. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
-   詳細・実機確認事項)はフェーズ6以降と並行して確認する。
+   詳細・実機確認事項)はフェーズ7以降と並行して確認する。
 
 **完了済み:**
 1. `git push` は `gh auth setup-git` でGCMの詰まりを回避し、完了済み(`origin/main` = `0f6c50c`)。
@@ -205,11 +216,25 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
     `Common::render_template()`を実際に実行して検証。既存Perl単体テスト67件は
     全件成功のまま。詳細は`docs/PROJECT_STATUS.md`チェックポイント17参照。
 
-**残タスク:**
-16. フェーズ6の残りタスク(テスト・CI/CD詳細実装)に着手する
-    (連携契約実装・Cyberhome側CGI実装・Vercel側FastAPI実装・静的ページ実装は
-    Task#2〜4+gap-fillで完了済み)。
-17. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ6以降と並行して確認する。
+16. **フェーズ6 Task#5(テスト・CI/CD詳細実装、Wave3)完了・フェーズ6全体完了
+    (2026-08-02):** `.github/workflows/*.yml`4本はTask#1がすでに
+    `internal-spec-testing.md`の詳細設計通りに完成させていたことを確認(変更なし)。
+    Playwright実テストファイル8ファイル・11ケース(`tests/e2e/public/`、
+    2.1節シナリオ#1〜#10・#4b)+`package.json`・`playwright.config.ts`を新規実装。
+    実装済みの実ファイル(HTML/JS/Perl/FastAPI)を読み合わせてセレクタ・文言を
+    一次情報から確認。静的ページ3ケースはローカルPythonサーバーで実行・成功確認、
+    残り5ケースはCyberhome/Vercel実機が無いため未実行(タスク指示通り)。Q4
+    (日次疎通確認、B'案)の実装(`recaptcha_service.py` `_resolve_secret_key`)は
+    実装済みと確認したが、対応pytestケースの欠落を発見し2件バックフィル
+    (`test_recaptcha.py`、pytest合計29→31件)。Perl 67件・pytest 31件全件成功。
+    詳細・残タスク一覧は`docs/PROJECT_STATUS.md`チェックポイント18参照。
+
+**フェーズ6(実装・単体テスト)は上記16項目をもって全体完了した。単体テスト合計
+148件(Perl 67 + pytest 31 + FAQバリデータ50)がすべて成功している。**
+
+**残タスク(フェーズ7以降が参照すべき一覧、詳細は`docs/PROJECT_STATUS.md`
+チェックポイント18を参照):**
+17. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ7以降と並行して確認する。
 18. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
     現行方針と不整合)の扱いを整理する(非ブロッキング、詳細は
     `docs/PROJECT_STATUS.md`チェックポイント13の「フェーズ4/5へのフィードバック」参照)。
@@ -225,6 +250,16 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
     意図的に追加していない(Task#3の既存成果物へのスコープ拡大を避けたため)。
     external-spec.mdの「全ページ共通」要件を厳密に満たすには、将来これらにも
     追加する余地がある(非ブロッキング)。
+22. Playwrightスモークテスト(`tests/e2e/public/`)のうち5ファイル
+    (`news`/`basic-auth`/`faq-widget`/`vercel-faq-api`/`contact-submission`)は
+    Cyberhome/Vercelの実デプロイが存在しないためこの環境では一度も実行されていない。
+    実デプロイ後、`workflow_dispatch`で`playwright-smoke.yml`を手動実行して初回の
+    実地検証を行うこと。
+23. GitHub Secrets/Variables(`CYBERHOME_FTP_*`、`SITE_BASE_URL`、
+    `VERCEL_API_BASE_URL`、`SMOKE_TEST_SECRET`等)がこの環境では未登録であり、
+    登録されるまで4本のワークフローは実行時に失敗する(構文・設計は完成済み)。
+24. GitHubブランチ保護ルール・PRベース開発フロー(`internal-spec-repo-cicd.md` 6章)
+    への移行が未実施のまま(引き続きmainへの直接コミットで進めている)。
 
 ---
 
@@ -242,8 +277,8 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
 | 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
-| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | 進行中(Task#1: リポジトリ構成・CI/CD基盤 完了、Task#2: データモデル 完了、Task#3: Cyberhome側Perl CGI実装 完了、Task#4: Vercel/FastAPI実装 完了、静的ページ実装(gap-fill) 完了、2026-08-02。残: テスト・CI/CD詳細実装) |
-| 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 未着手 |
+| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | **完了(2026-08-02)**: Task#1(リポジトリ構成・CI/CD基盤)・Task#2(データモデル)・Task#3(Cyberhome側Perl CGI実装)・Task#4(Vercel/FastAPI実装)・静的ページ実装(gap-fill)・Task#5(テスト・CI/CD詳細実装)のすべてが完了。単体テスト合計148件全件成功(Perl 67 + pytest 31 + faq validator 50) |
+| 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 着手可能 |
 | 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 未着手 |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |
 | 10 | 保守メンテナンス | p10-maintainer | (継続、Issue単位で個別記録) | - |
@@ -256,7 +291,8 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
   `## 承認ステータス: 承認 / 差し戻し` を追記する。差し戻しの場合は理由を明記し、
   前フェーズの担当エージェントに戻す。
 - 実装(6)はフェーズ5が承認されるまで開始しない。**2026-08-02、フェーズ5が承認され、
-  フェーズ6は着手可能になった。**
+  フェーズ6は着手可能になった。フェーズ6は同日中にTask#1〜5すべてを完了し、
+  フェーズ7(システムテスト)は着手可能な状態になった。**
 - 各エージェントは作業開始時に必ず `docs/PROJECT_STATUS.md` と本ディレクトリの既存ファイルを
   読み、前提を引き継ぐこと。
 - **2026-08-02方針転換:** 上記のゲートルールはMVP初回リリース(フェーズ1〜9)に適用する。

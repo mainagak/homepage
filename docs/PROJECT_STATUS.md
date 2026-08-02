@@ -955,3 +955,74 @@ Playwrightスモークテストのみ、実際のCyberhome/Vercelデプロイ先
 着手前に上記残タスク1・7・8(Vercel/reCAPTCHA実値・GitHub Secrets・Cyberhome
 非公開ファイル)のうち実施可能なものから運営者作業として進めることを推奨する
 (これらが揃わない限り、フェーズ7で実機に対するテストは実施できない可能性が高い)。
+
+## 2026-08-02: チェックポイント19 — フェーズ7(システムテスト)実施、不合格判定
+
+`docs/specs/internal-spec-integration.md`(Cyberhome⇔Vercel連携契約)を中心に、
+フェーズ6で並行実装された各モジュールの継ぎ目を、実際にコードを動かして検証した
+(ペーパーレビューのみに頼らない)。詳細・全項目の結果は
+`docs/specs/system-test-report.md`を参照。
+
+- **実施したこと:**
+  - Python 3.12.10(`api/requirements.txt`一式インストール済み)で`api/app/main.py`を
+    実際にuvicornで起動し、`GET /api/faq`・`GET /health`・
+    `POST /api/verify-recaptcha`・`OPTIONS`プリフライトを`curl`で実叩き。
+  - `api/app/services/recaptcha_service.py`の`_issue_token()`が生成した**実際の
+    HMACトークン**を、Perl `site/cgi-bin/lib/ContactLogic.pm`の`verify_token()`に
+    **実際に**投入し、正しいシークレット/誤ったシークレット/改ざん署名/
+    フォーマット不正/欠如/期限切れ(300秒)/クロックスキュー(60秒境界)の
+    全パターンで期待通りに合格・拒否することを確認した。
+  - Cygwin環境にCGI.pm本体が無いため、`CGI->new`/`param()`のみを実装した
+    テスト専用の最小限スタブ(非シップ)を用意し、実際の`site/contact.html`・
+    `site/cgi-bin/contact.cgi`・`site/cgi-bin/lib/ContactLogic.pm`を実際の
+    POSTボディで実行して正常系・異常系(不正トークン)双方の描画結果を確認した。
+  - `site/news.cgi`のパストラバーサル対策・404・記事0件時の一覧表示、
+    `.htaccess`(cgi-bin/dl/qr)のrealm共有設定、環境変数・シークレット名の
+    全体突合(`api/app/core/config.py`・`site/cgi-bin/lib/*.pm`・
+    `.github/workflows/*.yml`・`.env.example`類)も確認した。
+  - 検証で作成した一時ファイル(`site/conf/hmac_secret.txt`、
+    `site/cgi-bin/contact_log.txt`等、いずれも`.gitignore`対象または非コミット)は
+    テスト後に削除し、既存のPerl単体テスト67件を再実行して副作用がないことを
+    確認した。
+- **合格した項目:** HMACトークンの生成・検証・改ざん検知・期限切れ・
+  クロックスキュー許容、FAQ API(`GET /api/faq`)の実レスポンス形状と
+  `site/js/chat-widget.js`の実パース処理との整合、CORS許可/拒否オリジンの
+  基本動作、`news.cgi`/`download.cgi`のエラーパス、`.htaccess`のrealm共有、
+  環境変数名の全体突合(過去に発見された`HMAC_SHARED_SECRET`のような表記ゆれの
+  再発なし)。
+- **不合格と判定した重大な発見:** `site/cgi-bin/contact.cgi`が`CGI->new`実行時に
+  `$CGI::PARAM_UTF8 = 1;`(または`use CGI '-utf8';`)を設定していないため、
+  日本語の姓・名・お問い合わせ内容が文字化けする(例:「山田」→「å±±ç°」)。
+  実際にCGI.pmの`%XX`復号アルゴリズムを再現したハーネスで`contact.cgi`を
+  日本語入力で実行して再現を確認し、`Encode::decode_utf8()`を1行加えるだけで
+  解消することも確認して根本原因を特定した。影響範囲は通知メール・自動返信
+  メール・エラー再描画・`contact_log.txt`記録のすべてに及ぶ(問い合わせフォーム
+  の根幹機能)。`download.cgi`/`news.cgi`のCGIパラメータは英数字のみを許可する
+  正規表現でバリデーションされているため影響を受けない。
+  - **なぜフェーズ6の単体テスト67件で検出されなかったか:** 既存の
+    `ContactLogic.t`等は`use utf8;`宣言済みのテストファイル内でソースコード
+    リテラル(`'山田'`)を直接関数へ渡しており、これは最初から正しくデコード
+    済みのPerl文字列である。実際のCGI.pmが生成する「バイト列のまま」の文字列とは
+    異なるため、`contact.cgi`が実際のCGI環境から`ContactLogic.pm`へ正しく
+    デコードされた文字列を渡せているかというCGI境界の契約は一度も検証されて
+    いなかった。単体テストの不備ではなく、単体テストの守備範囲外にある
+    継ぎ目(まさにシステムテストの担当領域)である。
+- **軽微な発見:** `api/app/main.py`のCORSMiddlewareに`max_age=86400`が
+  指定されておらず、Starletteのデフォルト600秒のままになっている
+  (`internal-spec-integration.md` 5.2節・8章の契約値86400秒と不一致)。
+  機能的な破綻はないが契約との乖離のため記録した。
+- **合否判定に含めなかったもの:** `docs/PROJECT_STATUS.md`チェックポイント18の
+  残タスク1・2・7・8(`VERCEL_API_BASE_URL`・reCAPTCHAサイトキーの
+  プレースホルダー未置換、Playwright残り5シナリオ未実行、GitHub Secrets/
+  Variables未登録、Cyberhome実機`.htpasswd`/`hmac_secret.txt`未配置)は、
+  実インフラが存在しない本環境では原理的に検証不可能であり、状態変化なしの
+  既知の残タスクとして再確認したのみで、新たな不合格理由には含めていない。
+
+**判定: 不合格(要修正)。** `contact.cgi`の日本語入力文字化けバグをフェーズ6へ
+差し戻し、修正(`$CGI::PARAM_UTF8 = 1;`の追加等)後に本フェーズを再実施すること。
+CORS Max-Ageの軽微な修正もあわせて対応することを推奨する。
+
+**次のアクション:** フェーズ6の担当範囲へ`contact.cgi`修正を差し戻す。修正完了後、
+`docs/specs/system-test-report.md`の該当項目(特に日本語値を含む`contact.cgi`の
+正常系・エラー系)を再テストし、合格判定を得てからフェーズ8(E2Eテスト)へ進むこと。
+

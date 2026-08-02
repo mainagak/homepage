@@ -2,10 +2,30 @@
 
 ## 🔴 再開時に最初に読むこと(/clear後はここから)
 
-**現在地:** フェーズ1〜6(外部仕様調査・レビュー承認・アーキテクチャー調査・内部仕様調査・
-内部仕様最終レビュー・実装/単体テスト)が完了。**フェーズ6は2026-08-02にTask#5
-(テスト・CI/CD詳細実装)の完了をもって全体完了し、フェーズ7(システムテスト)へ
-着手可能な状態になった。**
+**現在地:** フェーズ1〜6が完了、**フェーズ7(システムテスト)は2026-08-02に実施し
+「不合格(要修正)」判定。`contact.cgi`の日本語入力文字化けバグ(下記参照)をフェーズ6へ
+差し戻し、修正・再テストしてからフェーズ8(E2Eテスト)へ進むこと。**
+
+**2026-08-02フェーズ7(システムテスト)実施・不合格判定:**
+`docs/specs/internal-spec-integration.md`のCyberhome⇔Vercel連携契約を中心に、
+実際にコードを動かして継ぎ目を検証した(ペーパーレビューではなく、Python
+`_issue_token()`が生成した実トークンをPerl `verify_token()`に実投入、uvicornを
+実起動して`GET /api/faq`等を実際に叩く、CGI.pm相当のハーネスで`contact.cgi`を
+実際のPOSTボディで実行、等)。
+- **合格:** HMACトークンの生成・検証・改ざん検知・期限切れ(300秒)・クロックスキュー
+  許容(60秒)、FAQ APIの実レスポンス形状と`chat-widget.js`のパース処理との整合、
+  CORS許可/拒否の基本動作、`news.cgi`/`download.cgi`のエラーパス(パストラバーサル・
+  404)、`.htaccess`のrealm共有設定、環境変数名の全体突合(名称ドリフルなし)。
+- **不合格(重大):** `site/cgi-bin/contact.cgi`が`CGI->new`実行時に
+  `$CGI::PARAM_UTF8 = 1;`(または`use CGI '-utf8';`)を設定しておらず、日本語の
+  姓・名・お問い合わせ内容が文字化けする。通知メール・自動返信メール・エラー
+  再描画・ログ記録のすべてに影響する。フェーズ6の単体テスト67件はソースコード
+  リテラル(常に正しくデコード済み)を関数に直接渡していたため、この
+  CGI境界のデコード漏れを検出できていなかった。**フェーズ6への差し戻しが必要。**
+- **軽微(要修正だが致命的ではない):** `api/app/main.py`のCORSMiddlewareに
+  `max_age=86400`が指定されておらず、Starletteのデフォルト600秒のまま
+  (`internal-spec-integration.md` 5.2節・8章の契約値86400秒と不一致)。
+- 詳細・再現方法・推奨修正内容は[system-test-report.md](system-test-report.md)を参照。
 
 **2026-08-02フェーズ6 Task#5(テスト・CI/CD詳細実装、Wave3)完了・フェーズ6全体完了:**
 `internal-spec-testing.md`に基づき、Playwright実テストファイル8ファイル・11ケース
@@ -114,12 +134,19 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 全ドキュメントへ反映済み。
 
 **次回再開時に最初にやること:**
-1. フェーズ7(p7-system-tester、システムテスト)に着手する。`docs/PROJECT_STATUS.md`
-   チェックポイント18の残タスク一覧(特に1・7・8: Vercel/reCAPTCHA実値、GitHub
-   Secrets、Cyberhome非公開ファイルの実配置)のうち運営者が対応可能なものを先に
-   進めておくと、フェーズ7で実機に対するテストが実施しやすくなる。
-2. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
-   詳細・実機確認事項)はフェーズ7以降と並行して確認する。
+1. **フェーズ6への差し戻し対応:** `site/cgi-bin/contact.cgi`に`$CGI::PARAM_UTF8 = 1;`
+   (または`use CGI '-utf8';`)を追加し、日本語フォーム入力の文字化けを修正する。
+   あわせて`api/app/main.py`のCORSMiddlewareに`max_age=86400`を追加する(軽微、
+   任意だが推奨)。詳細は[system-test-report.md](system-test-report.md)を参照。
+2. 修正後、システムテスト(フェーズ7)を再実施し、特に日本語値を含む
+   `contact.cgi`の正常系・エラー系を再確認した上で合格判定を得る。
+3. フェーズ7再合格後、フェーズ8(p8-e2e-tester、E2Eテスト)に着手する。
+   `docs/PROJECT_STATUS.md`チェックポイント18の残タスク一覧(特に1・7・8:
+   Vercel/reCAPTCHA実値、GitHub Secrets、Cyberhome非公開ファイルの実配置)のうち
+   運営者が対応可能なものを先に進めておくと、フェーズ8で実機に対するテストが
+   実施しやすくなる。
+4. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
+   詳細・実機確認事項)はフェーズ8以降と並行して確認する。
 
 **完了済み:**
 1. `git push` は `gh auth setup-git` でGCMの詰まりを回避し、完了済み(`origin/main` = `0f6c50c`)。
@@ -278,7 +305,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
 | 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | **完了(2026-08-02)**: Task#1(リポジトリ構成・CI/CD基盤)・Task#2(データモデル)・Task#3(Cyberhome側Perl CGI実装)・Task#4(Vercel/FastAPI実装)・静的ページ実装(gap-fill)・Task#5(テスト・CI/CD詳細実装)のすべてが完了。単体テスト合計148件全件成功(Perl 67 + pytest 31 + faq validator 50) |
-| 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | 着手可能 |
+| 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | **不合格・要修正(2026-08-02)**: contact.cgiの日本語文字化けバグをフェーズ6へ差し戻し中 |
 | 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 未着手 |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |
 | 10 | 保守メンテナンス | p10-maintainer | (継続、Issue単位で個別記録) | - |

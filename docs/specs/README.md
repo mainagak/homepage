@@ -2,11 +2,38 @@
 
 ## 🔴 再開時に最初に読むこと(/clear後はここから)
 
-**現在地:** フェーズ1〜6が完了、フェーズ7(システムテスト)は2026-08-02に実施し
-「不合格(要修正)」判定。**同日中にフェーズ6への差し戻し修正(`contact.cgi`の
-文字化けバグ・CORS Max-Age)を完了した(下記参照)。フェーズ7はまだ再実施・再判定
-されていない(この修正自体はフェーズ7の再判定を構成しない)。次に着手すべきは
-フェーズ7の再実施であり、合格するまでフェーズ8(E2Eテスト)へは進まないこと。**
+**現在地:** フェーズ1〜7が完了。フェーズ7(システムテスト)は2026-08-02に初回実施し
+「不合格(要修正)」判定→同日中にフェーズ6への差し戻し修正(`contact.cgi`の文字化け
+バグ・CORS Max-Age)完了→同日中にp7-system-testerが独立に再検証し**「合格」判定**を
+得た(下記参照)。**次に着手すべきはフェーズ8(E2Eテスト)。**
+
+**2026-08-02フェーズ7(システムテスト)再実施・合格判定:**
+チェックポイント20の自己申告(修正した本人による「直った」という報告)を鵜呑みにせず、
+p7-system-testerが独立の視点で再検証した。
+- Perl単体テスト72件(既存67+`ContactCgiUtf8Boundary.t`5)・pytest31件を実際に
+  再実行し、いずれも全件成功を確認(自己申告値と一致)。
+- **既存の回帰テストをそのまま再実行するだけでなく、自ら新規に書いた別のテスト
+  ハーネスで独立に再現・確認:** 実際に有効なHMACトークンを生成した上で日本語の
+  姓・名・複数行本文を含む実POSTを`contact.cgi`(子プロセス)に投入し、
+  バリデーション・トークン検証・重複判定・`contact_log.txt`記録まで到達させ、
+  ログファイルの生バイト列に文字化けがないことを確認(既存回帰テストより検証範囲を
+  1段階広げた)。エラー再描画経路・メール本文組み立て関数への受け渡しも別の日本語
+  データで独自に確認し、合計16項目すべて合格。
+- **裏取り:** 上記ハーネスを`contact.cgi`修正前バージョンに一時的に差し替えて
+  再実行し、5/16項目が実際に失敗する(=バグを検出できる)ことを確認した上で修正版に
+  復元し16/16に戻ることを確認。誤検知でないことを確認済み。
+- CORS `Access-Control-Max-Age`は、pytestのTestClientに頼らず実際に`uvicorn`を
+  起動し、`curl`で送った実プリフライトリクエストの生HTTPレスポンスヘッダーに
+  `access-control-max-age: 86400`が返ることを確認。
+- HMACトークン契約(Python発行→Perl検証)、FAQ/health実レスポンス、CORS許可外
+  オリジン拒否も再確認し、回帰なし。
+- 新たな問題は発見されなかった。詳細は
+  [system-test-report.md](system-test-report.md)の「再テスト: 2026-08-02」節、
+  `docs/PROJECT_STATUS.md`チェックポイント21を参照。
+- 前回報告の「発見した問題3」(実機依存の残タスク: Vercel/reCAPTCHA実値未設定、
+  Playwright残り5シナリオ未実行、GitHub Secrets未登録、Cyberhome実機の
+  `.htpasswd`/`hmac_secret.txt`未配置)は未解消のまま残っており、フェーズ8が
+  実機に対して実施できる範囲はこの状態に制約される。
 
 **2026-08-02フェーズ6差し戻し対応完了(`contact.cgi`文字化けバグ・CORS Max-Age):**
 `site/cgi-bin/contact.cgi`の`main()`内、`CGI->new`直前に`$CGI::PARAM_UTF8 = 1;`を
@@ -19,10 +46,9 @@
 子プロセス実行しUTF-8デコードを検証、5ケース)を新規追加し、修正前は実際に2ケースが
 失敗する(バグを検出する)ことを確認した上で、修正後に全件成功することを確認した。
 Perl 72件(既存67+新規5)・pytest 31件、全件成功。詳細は`docs/PROJECT_STATUS.md`
-チェックポイント20を参照。**フェーズ7の再判定はp7-system-testerが別途実施するもので
-あり、本対応では代行していない。**
+チェックポイント20を参照。
 
-**2026-08-02フェーズ7(システムテスト)実施・不合格判定:**
+**2026-08-02フェーズ7(システムテスト)初回実施・不合格判定:**
 `docs/specs/internal-spec-integration.md`のCyberhome⇔Vercel連携契約を中心に、
 実際にコードを動かして継ぎ目を検証した(ペーパーレビューではなく、Python
 `_issue_token()`が生成した実トークンをPerl `verify_token()`に実投入、uvicornを
@@ -41,7 +67,8 @@ Perl 72件(既存67+新規5)・pytest 31件、全件成功。詳細は`docs/PROJ
 - **軽微(要修正だが致命的ではない):** `api/app/main.py`のCORSMiddlewareに
   `max_age=86400`が指定されておらず、Starletteのデフォルト600秒のまま
   (`internal-spec-integration.md` 5.2節・8章の契約値86400秒と不一致)。
-- 詳細・再現方法・推奨修正内容は[system-test-report.md](system-test-report.md)を参照。
+- 詳細・再現方法・推奨修正内容は[system-test-report.md](system-test-report.md)を参照
+  (初回不合格判定の内容は履歴として残しており、再テスト節で上書きしていない)。
 
 **2026-08-02フェーズ6 Task#5(テスト・CI/CD詳細実装、Wave3)完了・フェーズ6全体完了:**
 `internal-spec-testing.md`に基づき、Playwright実テストファイル8ファイル・11ケース
@@ -150,24 +177,24 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 全ドキュメントへ反映済み。
 
 **次回再開時に最初にやること:**
-1. **フェーズ7(システムテスト)を再実施する。** チェックポイント20で
-   `contact.cgi`の`$CGI::PARAM_UTF8 = 1;`追加とCORS Max-Age修正は完了済みだが、
-   これはフェーズ6側の差し戻し対応であり、フェーズ7の合否判定そのものではない。
-   p7-system-testerとして、特に日本語値を含む`contact.cgi`の正常系・エラー系
-   (通知メール・自動返信メール・エラー再描画・`contact_log.txt`記録)と
-   `OPTIONS /api/verify-recaptcha`の`Access-Control-Max-Age`ヘッダーを実際に
-   再検証し、`docs/specs/system-test-report.md`を更新した上で合否判定を得ること。
-2. フェーズ7再合格後、フェーズ8(p8-e2e-tester、E2Eテスト)に着手する。
+1. **フェーズ8(p8-e2e-tester、E2Eテスト)に着手する。** フェーズ7(システムテスト)は
+   2026-08-02に合格判定済み(初回不合格→フェーズ6差し戻し修正→独立再検証で合格、
+   `docs/PROJECT_STATUS.md`チェックポイント19〜21・`system-test-report.md`参照)。
    `docs/PROJECT_STATUS.md`チェックポイント18の残タスク一覧(特に1・7・8:
    Vercel/reCAPTCHA実値、GitHub Secrets、Cyberhome非公開ファイルの実配置)のうち
    運営者が対応可能なものを先に進めておくと、フェーズ8で実機に対するテストが
    実施しやすくなる。
-3. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
+2. `docs/specs/architecture.md`末尾の「追加質問」3〜6(非ブロッキング、Cyberhome契約
    詳細・実機確認事項)はフェーズ8以降と並行して確認する。
-4. (非ブロッキング、次回内部仕様改訂時に整理)`internal-spec-cyberhome.md`は
+3. (非ブロッキング、次回内部仕様改訂時に整理)`internal-spec-cyberhome.md`は
    `download.cgi`/`news.cgi`にも防御的に`$CGI::PARAM_UTF8 = 1;`を設定すべきかを
    明記していない。現状は両CGIとも英数字のみのバリデーションのため実害はないが、
    将来日本語入力パラメータが追加された際の再発防止として方針を明記することを推奨する。
+4. (非ブロッキング)フェーズ7再テスト中に、リポジトリのルート直下に
+   `README.md`・`index.html`・`dist-release/`・`src/`・`public/`等のOneDrive同期由来と
+   思われる未追跡ファイルが出現していることに気づいた(`docs/PROJECT_STATUS.md`
+   チェックポイント21参照)。git管理下にはないため今回のテスト結果には影響していないが、
+   次回作業時に運営者が原因・要否を確認することを推奨する。
 
 **完了済み:**
 1. `git push` は `gh auth setup-git` でGCMの詰まりを回避し、完了済み(`origin/main` = `0f6c50c`)。
@@ -280,34 +307,58 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 **フェーズ6(実装・単体テスト)は上記16項目をもって全体完了した。単体テスト合計
 148件(Perl 67 + pytest 31 + FAQバリデータ50)がすべて成功している。**
 
-**残タスク(フェーズ7以降が参照すべき一覧、詳細は`docs/PROJECT_STATUS.md`
-チェックポイント18を参照):**
-17. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ7以降と並行して確認する。
-18. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
+17. **フェーズ7(システムテスト)初回実施・不合格判定(2026-08-02):**
+    実際にコードを動かして継ぎ目を検証し、`contact.cgi`の日本語入力文字化けバグ
+    (重大)とCORS `Access-Control-Max-Age`不一致(軽微)を発見、フェーズ6へ差し戻し。
+    詳細は`docs/PROJECT_STATUS.md`チェックポイント19、`system-test-report.md`参照。
+
+18. **フェーズ6差し戻し対応完了(2026-08-02):** `contact.cgi`に
+    `$CGI::PARAM_UTF8 = 1;`を追加、`api/app/main.py`のCORSMiddlewareに
+    `max_age=86400`を追加。回帰テスト`ContactCgiUtf8Boundary.t`(5ケース)を新規追加し、
+    Perl 72件・pytest 31件全件成功を確認。詳細は`docs/PROJECT_STATUS.md`
+    チェックポイント20参照。
+
+19. **フェーズ7(システムテスト)再実施・合格判定(2026-08-02):** チェックポイント18の
+    自己申告を独立に再検証(既存回帰テストの再実行に加え、自ら新規に書いた別の
+    テストハーネスでHMACトークン検証・重複判定・ログ記録まで到達するフルパス正常系や
+    エラー再描画経路を再確認し、修正前バージョンに戻すと実際に失敗することも確認)。
+    CORS Max-Ageは実uvicorn起動+実HTTPレスポンスヘッダーで86400を確認。新たな問題は
+    発見されず、**フェーズ7は合格。フェーズ8(E2Eテスト)に着手可能。**
+    詳細は`docs/PROJECT_STATUS.md`チェックポイント21、`system-test-report.md`の
+    「再テスト: 2026-08-02」節を参照。
+
+**残タスク(フェーズ8以降が参照すべき一覧、詳細は`docs/PROJECT_STATUS.md`
+チェックポイント18・21を参照):**
+20. 追加質問3〜6(architecture.md、非ブロッキング)はフェーズ8以降と並行して確認する。
+21. `scripts/setup.ps1`の陳腐化(Node.js前提のローカル開発セットアップ手順が
     現行方針と不整合)の扱いを整理する(非ブロッキング、詳細は
     `docs/PROJECT_STATUS.md`チェックポイント13の「フェーズ4/5へのフィードバック」参照)。
-19. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
+22. フェーズ10(FAQ管理GUI実装)着手時、`internal-spec-vercel.md` 7.2節のCSRF
     ダブルサブミット方式を`admin.py`ルーターとともに実装する(Task#4では
     スコープ外と判断し見送った、詳細は`docs/PROJECT_STATUS.md`チェックポイント15参照)。
-20. `site/js/chat-widget.js`・`contact-form.js`内の`VERCEL_API_BASE_URL`、
+23. `site/js/chat-widget.js`・`contact-form.js`内の`VERCEL_API_BASE_URL`、
     `site/contact.html`のreCAPTCHA `data-sitekey`は、実機情報(Vercelデプロイ先URL・
     reCAPTCHA v2サイトキーの登録)が確定次第、プレースホルダーから実際の値に
     置き換えること(非ブロッキング、詳細は`docs/PROJECT_STATUS.md`チェックポイント17
     参照)。
-21. `site/qr/book1.html`・`book2.html`にはFAQウィジェット(`chat-widget.js`)を
+24. `site/qr/book1.html`・`book2.html`にはFAQウィジェット(`chat-widget.js`)を
     意図的に追加していない(Task#3の既存成果物へのスコープ拡大を避けたため)。
     external-spec.mdの「全ページ共通」要件を厳密に満たすには、将来これらにも
     追加する余地がある(非ブロッキング)。
-22. Playwrightスモークテスト(`tests/e2e/public/`)のうち5ファイル
+25. Playwrightスモークテスト(`tests/e2e/public/`)のうち5ファイル
     (`news`/`basic-auth`/`faq-widget`/`vercel-faq-api`/`contact-submission`)は
     Cyberhome/Vercelの実デプロイが存在しないためこの環境では一度も実行されていない。
     実デプロイ後、`workflow_dispatch`で`playwright-smoke.yml`を手動実行して初回の
     実地検証を行うこと。
-23. GitHub Secrets/Variables(`CYBERHOME_FTP_*`、`SITE_BASE_URL`、
+26. GitHub Secrets/Variables(`CYBERHOME_FTP_*`、`SITE_BASE_URL`、
     `VERCEL_API_BASE_URL`、`SMOKE_TEST_SECRET`等)がこの環境では未登録であり、
     登録されるまで4本のワークフローは実行時に失敗する(構文・設計は完成済み)。
-24. GitHubブランチ保護ルール・PRベース開発フロー(`internal-spec-repo-cicd.md` 6章)
+27. GitHubブランチ保護ルール・PRベース開発フロー(`internal-spec-repo-cicd.md` 6章)
     への移行が未実施のまま(引き続きmainへの直接コミットで進めている)。
+28. (非ブロッキング)リポジトリのルート直下に出現した、git管理下にない
+    OneDrive同期由来と思われる未追跡ファイル群(`README.md`・`index.html`・
+    `dist-release/`・`src/`・`public/`等)の扱いを運営者が確認すること
+    (`docs/PROJECT_STATUS.md`チェックポイント21参照)。
 
 ---
 
@@ -325,9 +376,9 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 | 3 | 利用アーキテクチャー調査 | p3-architecture-researcher | [architecture.md](architecture.md) | ドラフト確定・ユーザー確認済み(2026-08-01)、フェーズ4引き継ぎ準備完了 |
 | 4 | 内部仕様調査 | p4-internal-spec-researcher(6分割) | [internal-spec.md](internal-spec.md) | 完了・全追加質問解消(2026-08-02) |
 | 5 | 内部仕様最終レビュー・確定 | p5-internal-spec-reviewer | internal-spec.md (承認セクション追記) | **承認(2026-08-02、非ブロッキングコメント4件)** |
-| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | **完了(2026-08-02)**: Task#1(リポジトリ構成・CI/CD基盤)・Task#2(データモデル)・Task#3(Cyberhome側Perl CGI実装)・Task#4(Vercel/FastAPI実装)・静的ページ実装(gap-fill)・Task#5(テスト・CI/CD詳細実装)のすべてが完了。単体テスト合計148件全件成功(Perl 67 + pytest 31 + faq validator 50) |
-| 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | **不合格・要修正(2026-08-02)**: contact.cgiの日本語文字化けバグをフェーズ6へ差し戻し中 |
-| 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 未着手 |
+| 6 | 実装・単体テスト | p6-implementer | ソースコード + 単体テスト | **完了(2026-08-02)**: Task#1(リポジトリ構成・CI/CD基盤)・Task#2(データモデル)・Task#3(Cyberhome側Perl CGI実装)・Task#4(Vercel/FastAPI実装)・静的ページ実装(gap-fill)・Task#5(テスト・CI/CD詳細実装)のすべてが完了。単体テスト合計148件全件成功(Perl 67 + pytest 31 + faq validator 50)。フェーズ7差し戻し対応(`contact.cgi`のUTF-8修正・CORS Max-Age修正)も完了、Perl 72件・pytest 31件全件成功 |
+| 7 | システムテスト | p7-system-tester | [system-test-report.md](system-test-report.md) | **合格(2026-08-02)**: 初回不合格(contact.cgiの日本語文字化けバグ・CORS Max-Age不一致)→フェーズ6差し戻し修正→独立再検証で合格。フェーズ8着手可能 |
+| 8 | E2Eテスト(受け入れテスト) | p8-e2e-tester | [e2e-test-report.md](e2e-test-report.md) | 着手可能(未着手) |
 | 9 | 最終レビュー・Issue確認 | p9-final-reviewer | [final-review.md](final-review.md) | 未着手 |
 | 10 | 保守メンテナンス | p10-maintainer | (継続、Issue単位で個別記録) | - |
 
@@ -340,7 +391,9 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
   前フェーズの担当エージェントに戻す。
 - 実装(6)はフェーズ5が承認されるまで開始しない。**2026-08-02、フェーズ5が承認され、
   フェーズ6は着手可能になった。フェーズ6は同日中にTask#1〜5すべてを完了し、
-  フェーズ7(システムテスト)は着手可能な状態になった。**
+  フェーズ7(システムテスト)は着手可能な状態になった。フェーズ7は初回不合格→
+  フェーズ6差し戻し修正→独立再検証で同日中に合格し、フェーズ8(E2Eテスト)は
+  着手可能な状態になった。**
 - 各エージェントは作業開始時に必ず `docs/PROJECT_STATUS.md` と本ディレクトリの既存ファイルを
   読み、前提を引き継ぐこと。
 - **2026-08-02方針転換:** 上記のゲートルールはMVP初回リリース(フェーズ1〜9)に適用する。
@@ -379,7 +432,7 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 ダウンロード機能のホスティング先、Vercelを問い合わせ機能のホスティング先とする**ことが
 2026-08-01に確定した。GitHub Pagesは本番ホスティングとしては採用しない。
 
-## 現在の未解決事項(フェーズ6以降と並行して確認可能、非ブロッキング)
+## 現在の未解決事項(フェーズ8以降と並行して確認可能、非ブロッキング)
 
 - Cyberhome契約プランの正確な月額費用
 - 文字コード/Apacheバージョンの実機確認
@@ -388,16 +441,16 @@ Wave3: テスト・デプロイ検証)で内部仕様の詳細設計を実行し
 
 詳細は`docs/specs/architecture.md`末尾の「追加質問」3〜6を参照。
 
-## フェーズ5レビューで記録した非ブロッキングコメント(フェーズ6着手時に解消推奨)
+## フェーズ5レビューで記録した非ブロッキングコメント(解消済み・履歴)
 
 詳細は`docs/specs/internal-spec.md`冒頭の承認セクションを参照。要約:
 
 1. `internal-spec-repo-cicd.md` 7.3節の環境変数名`HMAC_SHARED_SECRET`を
-   `INTEGRATION_HMAC_SECRET`に統一する(表記のみ、値は同一)。
+   `INTEGRATION_HMAC_SECRET`に統一する(表記のみ、値は同一)。**フェーズ6 Task#1で解消済み。**
 2. `internal-spec-vercel.md` 5.1節のレート制限に関する「確定前提」という出典表現を、
-   実態に合わせ「Wave2の裁量による追加」に修正する。
+   実態に合わせ「Wave2の裁量による追加」に修正する。**フェーズ6 Task#1で解消済み。**
 3. `internal-spec-datamodel.md` 3.5節のCSRF記述(FastAPI標準機構という誤った説明)を、
    `internal-spec-vercel.md` 7.2節の正しい実装方針(ダブルサブミット方式の独自実装)に
-   合わせて修正する。
+   合わせて修正する。**フェーズ6 Task#1で解消済み。**
 4. (任意) reCAPTCHAトークン期限切れ(300秒)のUXケースをフェーズ8受け入れテストで
-   一度手動確認する。
+   一度手動確認する。**フェーズ8のスコープとして引き続き未実施。**

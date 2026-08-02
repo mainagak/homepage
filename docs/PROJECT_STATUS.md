@@ -1709,3 +1709,20 @@ Claude Codeが画面操作を代行可能、それ以外の場合は運営者が
 
 **これでMVPの本番稼働に必要な項目は、GA4測定ID(任意性の低い最後の1点)を
 除いてすべて完了した。**
+
+## 2026-08-02: チェックポイント30 — GA4実測定ID反映、MVP運営者アクション完了
+
+運営者から実GA4測定ID`G-EG1WMDPTV0`の提供を受けた(Google側は設定済みとの
+申告)。全8ページ(`index.html`・`contact.html`・`contact-thanks.html`・
+`privacy.html`・`news.html`・`qr/book1.html`・`qr/book2.html`・
+`templates/header.html`)の`G-XXXXXXXXXX`プレースホルダーと関連TODOコメントを
+実IDに置換(コミット`cd531ca`)。`site/**`への変更により`deploy-cyberhome.yml`
+が自動起動(`push`トリガー)し、`backup`→`deploy`→`smoke-test`(11/11件)まで
+すべて成功したことを確認。実サイトの`<head>`に`id=G-EG1WMDPTV0`が反映されて
+いることをcurlで直接確認済み。
+
+**これでフェーズ9`final-review.md`が列挙した運営者アクションのうち、必須項目は
+すべて完了した。** 残るのは任意項目(本物のブランドロゴへの最終差し替え、
+Cyberhome契約プラン詳細の確認、GitHubブランチ保護ルールの導入)のみで、
+いずれもリリースを妨げない。**フェーズ10(保守メンテナンス)の通常サイクルへ
+完全移行してよい状態。**

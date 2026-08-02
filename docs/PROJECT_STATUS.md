@@ -1726,3 +1726,40 @@ Claude Codeが画面操作を代行可能、それ以外の場合は運営者が
 Cyberhome契約プラン詳細の確認、GitHubブランチ保護ルールの導入)のみで、
 いずれもリリースを妨げない。**フェーズ10(保守メンテナンス)の通常サイクルへ
 完全移行してよい状態。**
+
+## 2026-08-02: チェックポイント31 — Basic認証の実配置不備、特典ダウンロード3冊分の追加対応
+
+運営者から2件の報告を受け、いずれも実機でのみ顕在化する不具合を修正した。
+
+**1) Basic認証(`dl`/`qr`/`download.cgi`)が機能していなかった問題:**
+`AuthUserFile`が`internal-spec-cyberhome.md`確定当時のプレースホルダー
+(`/virtual/xxxxxx/public_html/dl/.htpasswd`)のまま未確定だった
+(`architecture.md`「追加質問」の一つ)。診断用CGI(`Cwd::abs_path`・
+`$ENV{DOCUMENT_ROOT}`を出力、確認後削除)を実サーバーへ一時的に配置して
+実際の絶対パス`/var/www/u2000343/jyoho1.web.cyberhome.ne.jp/public_html`を
+特定し、`site/dl/.htaccess`・`site/qr/.htaccess`・`site/cgi-bin/.htaccess`
+3ファイルを修正(コミット`e7501de`)。実`.htpasswd`(Git管理外)をFTPで配置し、
+正しい認証情報→200、誤った認証情報→401 を実機で確認した。
+
+**2) 特典ダウンロードファイルの追加(book1/book2/book3):**
+運営者が`site/Contents/book1〜3/`に配置したファイルは同名(`書籍テンプレート.pdf`、
+全角文字含む)だったため、`DownloadLogic::validate_file_param()`の半角英数字
+限定の正規表現を通過できない状態だった。運営者の了承を得て`bonus.pdf`に
+リネーム。またコード側は`book1`・`book2`しか認可対象にしていなかったため、
+`book3`を正式サポートするよう`DownloadLogic.pm`(`%BOOK_USERS`・
+`validate_file_param`正規表現)を拡張し、単体テストも19→21ケースに拡充
+(コミット`69938e9`)。
+
+実機テストで**もう1件、既存の単体テストでは検出できない不具合を発見**:
+`download.cgi`自身が`DownloadLogic.pm`とは別に独自の`m{\A(book[12])/}`正規表現で
+`$book`を再抽出していたため(認可判定用)、`book3`のリクエストは
+`validate_file_param`は通過するのに`$book`が`undef`になり403 Forbiddenで
+弾かれていた。`download.cgi`側の正規表現も`book[123]`に修正して解決
+(コミット`4f16bf3`)。単体テストが`DownloadLogic`の関数を直接呼ぶ構成のため、
+`download.cgi`本体に残る独立した正規表現までは検出できなかった、という
+教訓を残す(将来同様の追加をする際は、CGIスクリプト本体の正規表現も
+grepで確認すること)。
+
+**実機で最終確認:** book1user/book2user/book3user それぞれが自分の書籍のみ
+ダウンロード可能(200)、他の書籍へのアクセスは403で正しく拒否されることを
+確認済み。`book3user`の認証情報は`dvPassWord-202804`(他2冊と同じ命名規則)。
